@@ -1,0 +1,30 @@
+# Python / Django
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+*.env
+.env
+*.log
+db.sqlite3
+media/
+
+# Migrations (optionnel - certains les gardent)
+# apps/*/migrations/0*.py
+
+# Node / React
+node_modules/
+dist/
+build/
+.vite/
+
+# VS Code
+.vscode/
+
+# Système
+.DS_Store
+Thumbs.db
+*.swp
