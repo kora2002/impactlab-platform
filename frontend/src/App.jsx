@@ -4,7 +4,9 @@ import Layout from "./components/layout/Layout";
 import Login from "./pages/auth/Login";
 import Dashboard from "./pages/dashboard/Dashboard";
 import Beneficiaires from "./pages/beneficiaires/Beneficiaires";
+import FicheBeneficiaire from "./pages/beneficiaires/FicheBeneficiaire";
 import Programmes from "./pages/programmes/Programmes";
+import Inscriptions from "./pages/inscriptions/Inscriptions";
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem("access");
@@ -27,6 +29,8 @@ export default function App() {
         <Route index element={<Dashboard />} />
         <Route path="beneficiaires" element={<Beneficiaires />} />
         <Route path="programmes" element={<Programmes />} />
+        <Route path="inscriptions" element={<Inscriptions />} />
+        <Route path="beneficiaires/:id" element={<FicheBeneficiaire />} />
       </Route>
     </Routes>
   );
