@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Programme, Etape, Cohorte
+from django.db.models import Count
 
 
 class EtapeSerializer(serializers.ModelSerializer):
@@ -87,7 +88,6 @@ class ProgrammeListSerializer(serializers.ModelSerializer):
         ]
 
     def get_nombre_beneficiaires(self, obj):
-        # Compte tous les bénéficiaires inscrits dans ce programme
         return obj.cohortes.aggregate(
-            total=models.Count('inscriptions')
+            total=Count('inscriptions')
         )['total'] or 0
