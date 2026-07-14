@@ -1,10 +1,9 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-import { useAuth } from "./contexts/AuthContext";
-import Layout from "./components/layout/Layout";
-import Login from "./pages/auth/Login";
-import Dashboard from "./pages/dashboard/Dashboard";
-import Beneficiaires from "./pages/beneficiaires/Beneficiaires";
-import Programmes from "./pages/programmes/Programmes";
+import Layout from "../components/layout/Layout";
+import Login from "../pages/auth/Login";
+import Dashboard from "../pages/dashboard/Dashboard";
+import Beneficiaires from "../pages/beneficiaires/Beneficiaires";
+import Programmes from "../pages/programmes/Programmes";
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem("access");
@@ -12,7 +11,7 @@ function PrivateRoute({ children }) {
   return children;
 }
 
-export default function App() {
+export default function AppRouter() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />

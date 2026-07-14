@@ -1,0 +1,36 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #f8f9fa;
+    color: #1a1a1a;
+    font-size: 14px;
+    overflow-x: hidden;
+  }
+ 
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
+  
+  button {
+    cursor: pointer;
+    border: none;
+    outline: none;
+  }
+  
+  input,
+  select,
+  textarea {
+    outline: none;
+    font-family: inherit;
+    font-size: 14px;
+  }
+
+  #root {
+    min-height: 100vh;
+  }
