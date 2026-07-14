@@ -6,6 +6,7 @@ import Dashboard from "./pages/dashboard/Dashboard";
 import Beneficiaires from "./pages/beneficiaires/Beneficiaires";
 import FicheBeneficiaire from "./pages/beneficiaires/FicheBeneficiaire";
 import Programmes from "./pages/programmes/Programmes";
+import DetailProgramme from "./pages/programmes/DetailProgramme";
 import Inscriptions from "./pages/inscriptions/Inscriptions";
 
 function PrivateRoute({ children }) {
@@ -31,6 +32,7 @@ export default function App() {
         <Route path="programmes" element={<Programmes />} />
         <Route path="inscriptions" element={<Inscriptions />} />
         <Route path="beneficiaires/:id" element={<FicheBeneficiaire />} />
+        <Route path="programmes/:id" element={<DetailProgramme />} />
       </Route>
     </Routes>
   );
