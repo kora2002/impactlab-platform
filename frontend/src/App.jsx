@@ -8,6 +8,7 @@ import FicheBeneficiaire from "./pages/beneficiaires/FicheBeneficiaire";
 import Programmes from "./pages/programmes/Programmes";
 import DetailProgramme from "./pages/programmes/DetailProgramme";
 import Inscriptions from "./pages/inscriptions/Inscriptions";
+import DetailInscription from "./pages/inscriptions/DetailInscription";
 import Financements from "./pages/financements/Financements";
 import Documents from "./pages/documents/Documents";
 
@@ -33,6 +34,7 @@ export default function App() {
         <Route path="beneficiaires" element={<Beneficiaires />} />
         <Route path="programmes" element={<Programmes />} />
         <Route path="inscriptions" element={<Inscriptions />} />
+        <Route path="inscriptions/:id" element={<DetailInscription />} />
         <Route path="beneficiaires/:id" element={<FicheBeneficiaire />} />
         <Route path="programmes/:id" element={<DetailProgramme />} />
         <Route path="financements" element={<Financements />} />
