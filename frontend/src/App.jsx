@@ -8,6 +8,8 @@ import FicheBeneficiaire from "./pages/beneficiaires/FicheBeneficiaire";
 import Programmes from "./pages/programmes/Programmes";
 import DetailProgramme from "./pages/programmes/DetailProgramme";
 import Inscriptions from "./pages/inscriptions/Inscriptions";
+import Financements from "./pages/financements/Financements";
+import Documents from "./pages/documents/Documents";
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem("access");
@@ -33,6 +35,8 @@ export default function App() {
         <Route path="inscriptions" element={<Inscriptions />} />
         <Route path="beneficiaires/:id" element={<FicheBeneficiaire />} />
         <Route path="programmes/:id" element={<DetailProgramme />} />
+        <Route path="financements" element={<Financements />} />
+        <Route path="documents" element={<Documents />} />
       </Route>
     </Routes>
   );

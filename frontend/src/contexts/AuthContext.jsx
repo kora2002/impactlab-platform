@@ -24,6 +24,7 @@ export function AuthProvider({ children }) {
   const deconnexion = () => {
     logout();
     setUtilisateur(null);
+    window.location.href = "/login";
   };
 
   const value = {
