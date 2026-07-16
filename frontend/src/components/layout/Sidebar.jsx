@@ -6,6 +6,7 @@ const navItems = [
   { path: "/beneficiaires", label: "Bénéficiaires", icon: "👥" },
   { path: "/programmes", label: "Programmes", icon: "📋" },
   { path: "/inscriptions", label: "Inscriptions", icon: "📝" },
+  { path: "/suivi", label: "Suivi Insertion", icon: "📈" },
 ];
 
 const navBottom = [

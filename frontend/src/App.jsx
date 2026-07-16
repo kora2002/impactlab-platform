@@ -11,6 +11,7 @@ import Inscriptions from "./pages/inscriptions/Inscriptions";
 import DetailInscription from "./pages/inscriptions/DetailInscription";
 import Financements from "./pages/financements/Financements";
 import Documents from "./pages/documents/Documents";
+import Suivi from "./pages/suivi/Suivi";
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem("access");
@@ -39,6 +40,7 @@ export default function App() {
         <Route path="programmes/:id" element={<DetailProgramme />} />
         <Route path="financements" element={<Financements />} />
         <Route path="documents" element={<Documents />} />
+        <Route path="suivi" element={<Suivi />} />
       </Route>
     </Routes>
   );
