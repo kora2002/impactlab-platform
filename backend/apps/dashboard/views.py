@@ -8,14 +8,12 @@ from apps.programmes.models import Programme
 from apps.inscriptions.models import Inscription, Progression
 from apps.suivi.models import SuiviInsertion
 from apps.financements.models import Financement
+from apps.users.permissions import EstDirectionOuMERL
 
 
 class DashboardView(APIView):
-    """
-    GET /api/dashboard/
-    Agrège tous les indicateurs d'impact en une seule requête
-    """
-    permission_classes = [IsAuthenticated]
+    """GET /api/dashboard/"""
+    permission_classes = [EstDirectionOuMERL]
 
     def get(self, request):
 
@@ -43,12 +41,12 @@ class DashboardView(APIView):
         total_inseres = SuiviInsertion.objects.exclude(
             statut_insertion__in=['non_repondu', 'sans_solution']
         ).values('beneficiaire').distinct().count()
-        taux_insertion = round((total_inseres / total_beneficiaires) * 100, 2) if total_beneficiaires > 0 else 0
+        taux_insertion        = round((total_inseres / total_beneficiaires) * 100, 2) if total_beneficiaires > 0 else 0
         insertions_par_statut = SuiviInsertion.objects.values('statut_insertion').annotate(total=Count('id'))
 
         # ── 6. FINANCEMENTS
-        total_prevu         = Financement.objects.aggregate(t=Sum('montant_prevu'))['t'] or 0
-        total_realise       = Financement.objects.aggregate(t=Sum('montant_realise'))['t'] or 0
+        total_prevu           = Financement.objects.aggregate(t=Sum('montant_prevu'))['t'] or 0
+        total_realise         = Financement.objects.aggregate(t=Sum('montant_realise'))['t'] or 0
         taux_execution_global = round((total_realise / total_prevu) * 100, 2) if total_prevu > 0 else 0
 
         # ── 7. RÉPARTITION PAR LOCALITÉ
@@ -104,11 +102,8 @@ class DashboardView(APIView):
 
 
 class DashboardProgrammeView(APIView):
-    """
-    GET /api/dashboard/programme/<id>/
-    Indicateurs détaillés pour un programme spécifique
-    """
-    permission_classes = [IsAuthenticated]
+    """GET /api/dashboard/programme/<id>/"""
+    permission_classes = [EstDirectionOuMERL]
 
     def get(self, request, programme_id):
         try:
@@ -116,35 +111,33 @@ class DashboardProgrammeView(APIView):
         except Programme.DoesNotExist:
             return Response({"detail": "Programme non trouvé."}, status=404)
 
-        inscriptions = Inscription.objects.filter(cohorte__programme=programme)
-        total = inscriptions.count()
+        inscriptions      = Inscription.objects.filter(cohorte__programme=programme)
+        total             = inscriptions.count()
         beneficiaires_ids = inscriptions.values_list('beneficiaire_id', flat=True)
-        beneficiaires = Beneficiaire.objects.filter(id__in=beneficiaires_ids)
-
-        femmes = beneficiaires.filter(genre='femme').count()
-        taux_parite = round((femmes / total) * 100, 2) if total > 0 else 0
-
-        abandons = Progression.objects.filter(
+        beneficiaires     = Beneficiaire.objects.filter(id__in=beneficiaires_ids)
+        femmes            = beneficiaires.filter(genre='femme').count()
+        taux_parite       = round((femmes / total) * 100, 2) if total > 0 else 0
+        abandons          = Progression.objects.filter(
             inscription__cohorte__programme=programme,
             statut='abandonne'
         ).count()
 
         return Response({
-            "programme": programme.nom,
-            "type": programme.get_type_display(),
-            "statut": programme.get_statut_display(),
+            "programme":      programme.nom,
+            "type":           programme.get_type_display(),
+            "statut":         programme.get_statut_display(),
             "total_inscrits": total,
-            "femmes": femmes,
-            "taux_parite": taux_parite,
-            "abandons": abandons,
-            "nombre_etapes": programme.etapes.count(),
+            "femmes":         femmes,
+            "taux_parite":    taux_parite,
+            "abandons":       abandons,
+            "nombre_etapes":  programme.etapes.count(),
             "nombre_cohortes": programme.cohortes.count(),
         })
 
 
 class ExportExcelView(APIView):
     """GET /api/dashboard/export/excel/"""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [EstDirectionOuMERL]
 
     def get(self, request):
         from .exports import export_excel
@@ -153,7 +146,7 @@ class ExportExcelView(APIView):
 
 class ExportPDFView(APIView):
     """GET /api/dashboard/export/pdf/"""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [EstDirectionOuMERL]
 
     def get(self, request):
         from .exports import export_pdf

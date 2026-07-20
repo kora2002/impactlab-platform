@@ -67,21 +67,17 @@ class ProfilView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+from .permissions import EstDirection
+
 class CreerUtilisateurView(generics.CreateAPIView):
     """
     Créer un nouvel utilisateur (Direction uniquement)
     POST /api/users/creer/
     """
     serializer_class   = CreerUtilisateurSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [EstDirection]
 
     def perform_create(self, serializer):
-        # Seule la Direction peut créer des comptes
-        if not self.request.user.is_direction:
-            return Response(
-                {"detail": "Permission refusée."},
-                status=status.HTTP_403_FORBIDDEN
-            )
         serializer.save()
 
 
@@ -91,14 +87,8 @@ class ListeUtilisateursView(generics.ListAPIView):
     GET /api/users/
     """
     serializer_class   = UtilisateurSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        # Seule la Direction voit tous les utilisateurs
-        if self.request.user.is_direction:
-            return Utilisateur.objects.all().order_by('last_name')
-        # Les autres ne voient que leur propre compte
-        return Utilisateur.objects.filter(id=self.request.user.id)
+    permission_classes = [EstDirection]
+    queryset           = Utilisateur.objects.all().order_by('last_name')
 
 
 class ChangerMotDePasseView(APIView):
