@@ -128,6 +128,15 @@ export default function Beneficiaires() {
       });
   };
 
+  // ── Import ASSO-PRO ──
+  const handleImportAssoPro = () => {
+    if (window.confirm("Importer les organisations depuis ASSO-PRO ?")) {
+      api.post("beneficiaires/import-asso-pro/")
+        .then((res) => { alert(res.data.message); charger(); })
+        .catch(() => alert("Erreur lors de l'import ASSO-PRO."));
+    }
+  };
+
   // ── Rendu ──
   return (
     <div>
@@ -144,6 +153,9 @@ export default function Beneficiaires() {
             style={s.btnSecondary}
           >
             📥 Import Excel
+          </button>
+          <button onClick={handleImportAssoPro} style={s.btnAssoPro}>
+            🔗 Import ASSO-PRO
           </button>
           <button onClick={() => setShowModal(true)} style={s.btnPrimary}>
             + Nouveau bénéficiaire
@@ -301,15 +313,10 @@ export default function Beneficiaires() {
               <button onClick={() => setShowModalImport(false)} style={s.btnClose}>✕</button>
             </div>
 
-            {/* Instructions + modèle */}
             <div style={{ background: "#EEF5F7", padding: "12px", borderRadius: "8px", marginBottom: "1rem", fontSize: "13px", color: "#1F4E5F" }}>
               <strong>Format requis :</strong> nom, prénom, genre (homme/femme), téléphone, email, localite
               <br /><br />
-              <button
-                type="button"
-                onClick={handleTelechargerModele}
-                style={{ padding: "6px 12px", background: "#1F4E5F", color: "#fff", borderRadius: "6px", fontSize: "12px", border: "none", cursor: "pointer" }}
-              >
+              <button type="button" onClick={handleTelechargerModele} style={{ padding: "6px 12px", background: "#1F4E5F", color: "#fff", borderRadius: "6px", fontSize: "12px", border: "none", cursor: "pointer" }}>
                 📥 Télécharger le modèle Excel
               </button>
             </div>
@@ -326,7 +333,6 @@ export default function Beneficiaires() {
                 />
               </div>
 
-              {/* Résultat import */}
               {resultImport && (
                 <div style={{ marginTop: "1rem" }}>
                   <div style={{ background: "#ECFDF5", color: "#065F46", padding: "10px", borderRadius: "8px", marginBottom: "8px", fontSize: "13px" }}>
@@ -344,9 +350,7 @@ export default function Beneficiaires() {
               )}
 
               <div style={s.modalFooter}>
-                <button type="button" onClick={() => setShowModalImport(false)} style={s.btnSecondary}>
-                  Fermer
-                </button>
+                <button type="button" onClick={() => setShowModalImport(false)} style={s.btnSecondary}>Fermer</button>
                 <button type="submit" disabled={envoiImport} style={{ ...s.btnPrimary, opacity: envoiImport ? 0.7 : 1 }}>
                   {envoiImport ? "Import en cours..." : "Importer"}
                 </button>
@@ -366,14 +370,7 @@ function Field({ label, name, type = "text", value, onChange, required = false }
   return (
     <div>
       <label style={s.label}>{label}</label>
-      <input
-        type={type}
-        name={name}
-        value={value}
-        onChange={onChange}
-        required={required}
-        style={s.input}
-      />
+      <input type={type} name={name} value={value} onChange={onChange} required={required} style={s.input} />
     </div>
   );
 }
@@ -401,6 +398,7 @@ const s = {
   actionsCell:  { display: "flex", gap: "8px" },
   btnPrimary:   { padding: "10px 18px", background: "#1F4E5F", color: "#fff", borderRadius: "8px", fontWeight: "600", fontSize: "14px", border: "none", cursor: "pointer" },
   btnSecondary: { padding: "10px 18px", background: "#f0f0f0", color: "#333", borderRadius: "8px", fontWeight: "600", fontSize: "14px", border: "none", cursor: "pointer" },
+  btnAssoPro:   { padding: "10px 18px", background: "#0F6E56", color: "#fff", borderRadius: "8px", fontWeight: "600", fontSize: "14px", border: "none", cursor: "pointer" },
   btnVoir:      { padding: "6px 12px", background: "#f0f0f0", color: "#333", borderRadius: "8px", fontSize: "12px", border: "none", cursor: "pointer" },
   btnSupprimer: { padding: "6px 12px", background: "#FEF2F2", color: "#B91C1C", borderRadius: "8px", fontSize: "12px", border: "none", cursor: "pointer" },
   btnClose:     { background: "none", border: "none", fontSize: "20px", cursor: "pointer", color: "#888" },

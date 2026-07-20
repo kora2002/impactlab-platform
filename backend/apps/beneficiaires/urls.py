@@ -11,4 +11,5 @@ urlpatterns = [
     path('structures/', views.StructureListCreateView.as_view(), name='liste_structures'),
     path('structures/<int:pk>/', views.StructureDetailView.as_view(), name='detail_structure'),
     path('structures/<int:structure_id>/membres/', views.AjouterMembreStructureView.as_view(), name='ajouter_membre'),
+    path('beneficiaires/import-asso-pro/', views.ImportAssoproView.as_view(), name='import_asso_pro'),
 ]
