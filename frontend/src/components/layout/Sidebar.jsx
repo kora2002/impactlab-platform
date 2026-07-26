@@ -7,6 +7,7 @@ const navItems = [
   { path: "/programmes", label: "Programmes", icon: "📋" },
   { path: "/inscriptions", label: "Inscriptions", icon: "📝" },
   { path: "/suivi", label: "Suivi Insertion", icon: "📈" },
+  { path: "/structures", label: "Structures", icon: "🏢" },
 ];
 
 const navBottom = [

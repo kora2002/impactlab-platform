@@ -21,9 +21,11 @@ def get_token_asso_pro(username, password):
 def importer_organisations_asso_pro():
     """
     Récupère toutes les organisations depuis ASSO-PRO
+    avec leur niveau de professionnalisation (diagnostic)
     et les importe dans notre base comme Structure de type 'association'
     """
     try:
+        # ── 1. Récupérer la liste des organisations ──
         response = requests.get(
             f"{ASSO_PRO_BASE_URL}/users/organisations/",
             timeout=10
@@ -33,27 +35,44 @@ def importer_organisations_asso_pro():
 
         organisations = response.json()
         importees = 0
-        doublons = 0
-        erreurs = []
+        doublons  = 0
+        erreurs   = []
 
         for org in organisations:
             try:
-                # Vérifie si la structure existe déjà
-                existe = Structure.objects.filter(
-                    nom=org.get("nom", ""),
-                    type="association"
-                ).exists()
+                org_id = org.get("id", "")
+                nom    = org.get("nom", "")
 
-                if existe:
+                # Vérifie si la structure existe déjà
+                if Structure.objects.filter(nom=nom, type="association").exists():
                     doublons += 1
                     continue
 
+                # ── 2. Récupérer le niveau de professionnalisation ──
+                niveau_pro = ""
+                try:
+                    diag_response = requests.get(
+                        f"{ASSO_PRO_BASE_URL}/diagnostics/by-org/{org_id}/",
+                        timeout=5
+                    )
+                    if diag_response.status_code == 200:
+                        diag_data = diag_response.json()
+                        score_total        = diag_data.get("score_total", "")
+                        niveau             = diag_data.get("niveau", "")
+                        professionalism    = diag_data.get("professionalism_level", "")
+                        if score_total:
+                            niveau_pro = f"Score : {score_total}/100 — {niveau} ({professionalism})"
+                except Exception:
+                    pass  # Si le diagnostic échoue, on continue quand même
+
+                # ── 3. Créer la structure dans notre base ──
                 Structure.objects.create(
-                    nom=org.get("nom", ""),
+                    nom=nom,
                     type="association",
                     secteur=org.get("type_nom", ""),
                     contact_email=org.get("email", ""),
-                    description=f"Importée depuis ASSO-PRO — ID: {org.get('id', '')}",
+                    description=f"Importée depuis ASSO-PRO — ID: {org_id}",
+                    niveau_professionnalisation=niveau_pro,
                 )
                 importees += 1
 
@@ -62,9 +81,9 @@ def importer_organisations_asso_pro():
 
         return {
             "importees": importees,
-            "doublons": doublons,
-            "erreurs": erreurs,
-            "message": f"{importees} organisation(s) importée(s) depuis ASSO-PRO."
+            "doublons":  doublons,
+            "erreurs":   erreurs,
+            "message":   f"{importees} organisation(s) importée(s) depuis ASSO-PRO."
         }
 
     except requests.exceptions.ConnectionError:

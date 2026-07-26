@@ -12,6 +12,7 @@ import DetailInscription from "./pages/inscriptions/DetailInscription";
 import Financements from "./pages/financements/Financements";
 import Documents from "./pages/documents/Documents";
 import Suivi from "./pages/suivi/Suivi";
+import Structures from "./pages/structures/Structures";
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem("access");
@@ -41,6 +42,7 @@ export default function App() {
         <Route path="financements" element={<Financements />} />
         <Route path="documents" element={<Documents />} />
         <Route path="suivi" element={<Suivi />} />
+        <Route path="structures" element={<Structures />} />
       </Route>
     </Routes>
   );
