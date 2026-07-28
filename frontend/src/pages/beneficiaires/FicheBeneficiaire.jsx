@@ -236,20 +236,26 @@ export default function FicheBeneficiaire() {
 
                 <div>
                   <label style={labelStyle}>Cohorte *</label>
-                  <select
-                    value={formInscription.cohorte}
-                    onChange={(e) => setFormInscription({ ...formInscription, cohorte: e.target.value })}
-                    required
-                    disabled={!formInscription.programme_id}
-                    style={{ ...inputStyle, opacity: !formInscription.programme_id ? 0.5 : 1 }}
-                  >
-                    <option value="">
-                      {formInscription.programme_id ? "Sélectionner une cohorte" : "Choisissez d'abord un programme"}
-                    </option>
-                    {cohortes.map((c) => (
-                      <option key={c.id} value={c.id}>{c.nom} ({c.nombre_inscrits}/{c.capacite} inscrits)</option>
-                    ))}
-                  </select>
+                  {cohortes.length === 0 && formInscription.programme_id ? (
+                  <div style={{ background: "#FEF9EC", color: "#92400E", padding: "10px 14px", borderRadius: "8px", fontSize: "13px" }}>
+                   ⚠ Ce programme n'a pas encore de cohorte. Veuillez d'abord créer une cohorte depuis la page Programmes.
+                </div>
+                ) : (
+                <select
+                  value={formInscription.cohorte}
+                  onChange={(e) => setFormInscription({ ...formInscription, cohorte: e.target.value })}
+                  required
+                  disabled={!formInscription.programme_id}
+                  style={{ ...inputStyle, opacity: !formInscription.programme_id ? 0.5 : 1 }}
+                >
+                <option value="">
+                  {formInscription.programme_id ? "Sélectionner une cohorte" : "Choisissez d'abord un programme"}
+                </option>
+                {cohortes.map((c) => (
+                <option key={c.id} value={c.id}>{c.nom} ({c.nombre_inscrits}/{c.capacite} inscrits)</option>
+                ))}
+              </select>
+              )}
                 </div>
               </div>
 

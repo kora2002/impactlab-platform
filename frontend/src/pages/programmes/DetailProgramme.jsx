@@ -7,14 +7,17 @@ export default function DetailProgramme() {
   const navigate = useNavigate();
 
   // ── États ──
-  const [programme, setProgramme] = useState(null);
-  const [dashboard, setDashboard] = useState(null);
-  const [chargement, setChargement] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({});
-  const [envoi, setEnvoi] = useState(false);
-  const [erreur, setErreur] = useState("");
-  const [succes, setSucces] = useState("");
+  const [programme, setProgramme]       = useState(null);
+  const [dashboard, setDashboard]       = useState(null);
+  const [chargement, setChargement]     = useState(true);
+  const [showModal, setShowModal]       = useState(false);
+  const [showModalCohorte, setShowModalCohorte] = useState(false);
+  const [form, setForm]                 = useState({});
+  const [formCohorte, setFormCohorte]   = useState({ nom: "", date_debut: "", date_fin: "", capacite: "" });
+  const [envoi, setEnvoi]               = useState(false);
+  const [envoiCohorte, setEnvoiCohorte] = useState(false);
+  const [erreur, setErreur]             = useState("");
+  const [succes, setSucces]             = useState("");
 
   // ── Chargement ──
   const charger = () => {
@@ -31,7 +34,7 @@ export default function DetailProgramme() {
 
   useEffect(() => { charger(); }, [id]);
 
-  // ── Formulaire modification ──
+  // ── Modifier programme ──
   const handleFormChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -50,6 +53,23 @@ export default function DetailProgramme() {
       setErreur("Erreur lors de la mise à jour.");
     } finally {
       setEnvoi(false);
+    }
+  };
+
+  // ── Créer cohorte ──
+  const handleSubmitCohorte = async (e) => {
+    e.preventDefault();
+    setEnvoiCohorte(true);
+    try {
+      await api.post(`programmes/${id}/cohortes/`, formCohorte);
+      setSucces("Cohorte créée avec succès.");
+      setShowModalCohorte(false);
+      setFormCohorte({ nom: "", date_debut: "", date_fin: "", capacite: "" });
+      charger();
+    } catch {
+      setErreur("Erreur lors de la création de la cohorte.");
+    } finally {
+      setEnvoiCohorte(false);
     }
   };
 
@@ -87,7 +107,7 @@ export default function DetailProgramme() {
       {/* ── MESSAGE SUCCÈS ── */}
       {succes && <div style={s.alertSuccess}>✅ {succes}</div>}
 
-      {/* ── MÉTRIQUES PRINCIPALES (style dashboard) ── */}
+      {/* ── MÉTRIQUES ── */}
       {dashboard && (
         <div style={s.metricsGrid}>
           <MetricCard icon="👥" label="Bénéficiaires inscrits" value={dashboard.total_inscrits} color="#1F4E5F" />
@@ -102,20 +122,20 @@ export default function DetailProgramme() {
         </div>
       )}
 
-      {/* ── LIGNE 2 : Infos + Étapes ── */}
+      {/* ── GRILLE INFOS + ÉTAPES ── */}
       <div style={s.grid2}>
 
         {/* Informations générales */}
         <div style={s.card}>
           <div style={s.cardTitle}>📌 Informations générales</div>
-          <InfoRow label="Nom"          value={programme.nom} />
-          <InfoRow label="Type"         value={programme.type_display} />
-          <InfoRow label="Statut"       value={programme.statut_display} />
-          <InfoRow label="Localité"     value={programme.localite || "—"} />
+          <InfoRow label="Nom"           value={programme.nom} />
+          <InfoRow label="Type"          value={programme.type_display} />
+          <InfoRow label="Statut"        value={programme.statut_display} />
+          <InfoRow label="Localité"      value={programme.localite || "—"} />
           <InfoRow label="Date de début" value={new Date(programme.date_debut).toLocaleDateString("fr-FR")} />
-          <InfoRow label="Date de fin"  value={programme.date_fin ? new Date(programme.date_fin).toLocaleDateString("fr-FR") : "—"} />
-          <InfoRow label="Description"  value={programme.description || "—"} />
-          <InfoRow label="Objectifs"    value={programme.objectifs || "—"} />
+          <InfoRow label="Date de fin"   value={programme.date_fin ? new Date(programme.date_fin).toLocaleDateString("fr-FR") : "—"} />
+          <InfoRow label="Description"   value={programme.description || "—"} />
+          <InfoRow label="Objectifs"     value={programme.objectifs || "—"} />
         </div>
 
         {/* Étapes */}
@@ -143,7 +163,16 @@ export default function DetailProgramme() {
 
         {/* Cohortes */}
         <div style={{ ...s.card, gridColumn: "1 / -1" }}>
-          <div style={s.cardTitle}>👥 Cohortes ({programme.cohortes?.length})</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+            <div style={s.cardTitle}>👥 Cohortes ({programme.cohortes?.length})</div>
+            <button
+              onClick={() => setShowModalCohorte(true)}
+              style={{ padding: "6px 14px", background: "#1F4E5F", color: "#fff", borderRadius: "8px", fontSize: "13px", fontWeight: "600", border: "none", cursor: "pointer" }}
+            >
+              + Ajouter une cohorte
+            </button>
+          </div>
+
           {programme.cohortes?.length === 0 ? (
             <p style={{ color: "#aaa", fontSize: "13px" }}>Aucune cohorte définie.</p>
           ) : (
@@ -180,7 +209,7 @@ export default function DetailProgramme() {
         </div>
       </div>
 
-      {/* ── MODAL MODIFICATION ── */}
+      {/* ── MODAL MODIFICATION PROGRAMME ── */}
       {showModal && (
         <div style={s.overlay}>
           <div style={s.modal}>
@@ -193,7 +222,7 @@ export default function DetailProgramme() {
 
             <form onSubmit={handleSubmit}>
               <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                <Field label="Nom du programme *" name="nom"    value={form.nom || ""}    onChange={handleFormChange} required />
+                <Field label="Nom du programme *" name="nom" value={form.nom || ""} onChange={handleFormChange} required />
                 <div>
                   <label style={s.label}>Type *</label>
                   <select name="type" value={form.type || ""} onChange={handleFormChange} required style={s.input}>
@@ -226,7 +255,6 @@ export default function DetailProgramme() {
                   <textarea name="objectifs" value={form.objectifs || ""} onChange={handleFormChange} rows={3} style={{ ...s.input, resize: "vertical" }} />
                 </div>
               </div>
-
               <div style={s.modalFooter}>
                 <button type="button" onClick={() => setShowModal(false)} style={s.btnSecondary}>Annuler</button>
                 <button type="submit" disabled={envoi} style={{ ...s.btnPrimary, opacity: envoi ? 0.7 : 1 }}>
@@ -237,6 +265,36 @@ export default function DetailProgramme() {
           </div>
         </div>
       )}
+
+      {/* ── MODAL CRÉATION COHORTE ── */}
+      {showModalCohorte && (
+        <div style={s.overlay}>
+          <div style={{ ...s.modal, maxWidth: "480px" }}>
+            <div style={s.modalHeader}>
+              <h2 style={s.modalTitre}>Nouvelle cohorte</h2>
+              <button onClick={() => setShowModalCohorte(false)} style={s.btnClose}>✕</button>
+            </div>
+
+            <form onSubmit={handleSubmitCohorte}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                <Field label="Nom de la cohorte *" name="nom" value={formCohorte.nom} onChange={(e) => setFormCohorte({ ...formCohorte, nom: e.target.value })} required />
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                  <Field label="Date de début *" name="date_debut" type="date" value={formCohorte.date_debut} onChange={(e) => setFormCohorte({ ...formCohorte, date_debut: e.target.value })} required />
+                  <Field label="Date de fin"     name="date_fin"   type="date" value={formCohorte.date_fin}   onChange={(e) => setFormCohorte({ ...formCohorte, date_fin: e.target.value })} />
+                </div>
+                <Field label="Capacité *" name="capacite" type="number" value={formCohorte.capacite} onChange={(e) => setFormCohorte({ ...formCohorte, capacite: e.target.value })} required />
+              </div>
+              <div style={s.modalFooter}>
+                <button type="button" onClick={() => setShowModalCohorte(false)} style={s.btnSecondary}>Annuler</button>
+                <button type="submit" disabled={envoiCohorte} style={{ ...s.btnPrimary, opacity: envoiCohorte ? 0.7 : 1 }}>
+                  {envoiCohorte ? "Création..." : "Créer la cohorte"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
@@ -280,31 +338,31 @@ function Field({ label, name, type = "text", value, onChange, required = false }
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = {
-  center:         { padding: "2rem", color: "#888", textAlign: "center" },
-  header:         { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" },
-  titre:          { fontSize: "22px", fontWeight: "700", color: "#1a1a1a" },
-  sousTitre:      { fontSize: "13px", color: "#888" },
-  metricsGrid:    { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem", marginBottom: "1rem" },
-  grid2:          { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" },
-  card:           { background: "#fff", borderRadius: "12px", padding: "1.25rem", border: "1px solid #f0f0f0" },
-  cardTitle:      { fontSize: "15px", fontWeight: "700", color: "#1a1a1a", marginBottom: "1rem" },
-  etapeItem:      { display: "flex", alignItems: "center", gap: "12px", padding: "10px", background: "#f8f9fa", borderRadius: "8px" },
-  etapeNumero:    { width: "28px", height: "28px", borderRadius: "50%", background: "#1F4E5F", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: "700", flexShrink: 0 },
-  badgeValidation:{ fontSize: "11px", padding: "2px 8px", borderRadius: "20px", background: "#FEF9EC", color: "#92400E" },
-  table:          { width: "100%", borderCollapse: "collapse" },
-  th:             { textAlign: "left", padding: "10px 12px", fontSize: "12px", fontWeight: "600", color: "#888", borderBottom: "2px solid #f0f0f0", textTransform: "uppercase" },
-  tr:             { borderBottom: "1px solid #f5f5f5" },
-  td:             { padding: "12px", fontSize: "13px", color: "#444", verticalAlign: "middle" },
-  btnPrimary:     { padding: "10px 18px", background: "#1F4E5F", color: "#fff", borderRadius: "8px", fontWeight: "600", fontSize: "14px", border: "none", cursor: "pointer" },
-  btnSecondary:   { padding: "8px 14px", background: "#f0f0f0", color: "#333", borderRadius: "8px", fontSize: "13px", border: "none", cursor: "pointer" },
-  btnClose:       { background: "none", border: "none", fontSize: "20px", cursor: "pointer", color: "#888" },
-  alertSuccess:   { background: "#ECFDF5", color: "#065F46", padding: "10px 14px", borderRadius: "8px", marginBottom: "1rem", fontSize: "13px" },
-  alertError:     { background: "#FEF2F2", color: "#B91C1C", padding: "10px 14px", borderRadius: "8px", marginBottom: "1rem", fontSize: "13px" },
-  overlay:        { position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 },
-  modal:          { background: "#fff", borderRadius: "16px", padding: "2rem", width: "100%", maxWidth: "600px", maxHeight: "90vh", overflowY: "auto" },
-  modalHeader:    { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" },
-  modalTitre:     { fontSize: "18px", fontWeight: "700" },
-  modalFooter:    { display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "1.5rem" },
-  label:          { display: "block", fontSize: "13px", fontWeight: "500", color: "#444", marginBottom: "6px" },
-  input:          { width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1.5px solid #e0e0e0", fontSize: "14px", background: "#fafafa" },
+  center:          { padding: "2rem", color: "#888", textAlign: "center" },
+  header:          { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" },
+  titre:           { fontSize: "22px", fontWeight: "700", color: "#1a1a1a" },
+  sousTitre:       { fontSize: "13px", color: "#888" },
+  metricsGrid:     { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem", marginBottom: "1rem" },
+  grid2:           { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" },
+  card:            { background: "#fff", borderRadius: "12px", padding: "1.25rem", border: "1px solid #f0f0f0" },
+  cardTitle:       { fontSize: "15px", fontWeight: "700", color: "#1a1a1a" },
+  etapeItem:       { display: "flex", alignItems: "center", gap: "12px", padding: "10px", background: "#f8f9fa", borderRadius: "8px" },
+  etapeNumero:     { width: "28px", height: "28px", borderRadius: "50%", background: "#1F4E5F", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: "700", flexShrink: 0 },
+  badgeValidation: { fontSize: "11px", padding: "2px 8px", borderRadius: "20px", background: "#FEF9EC", color: "#92400E" },
+  table:           { width: "100%", borderCollapse: "collapse" },
+  th:              { textAlign: "left", padding: "10px 12px", fontSize: "12px", fontWeight: "600", color: "#888", borderBottom: "2px solid #f0f0f0", textTransform: "uppercase" },
+  tr:              { borderBottom: "1px solid #f5f5f5" },
+  td:              { padding: "12px", fontSize: "13px", color: "#444", verticalAlign: "middle" },
+  btnPrimary:      { padding: "10px 18px", background: "#1F4E5F", color: "#fff", borderRadius: "8px", fontWeight: "600", fontSize: "14px", border: "none", cursor: "pointer" },
+  btnSecondary:    { padding: "8px 14px", background: "#f0f0f0", color: "#333", borderRadius: "8px", fontSize: "13px", border: "none", cursor: "pointer" },
+  btnClose:        { background: "none", border: "none", fontSize: "20px", cursor: "pointer", color: "#888" },
+  alertSuccess:    { background: "#ECFDF5", color: "#065F46", padding: "10px 14px", borderRadius: "8px", marginBottom: "1rem", fontSize: "13px" },
+  alertError:      { background: "#FEF2F2", color: "#B91C1C", padding: "10px 14px", borderRadius: "8px", marginBottom: "1rem", fontSize: "13px" },
+  overlay:         { position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 },
+  modal:           { background: "#fff", borderRadius: "16px", padding: "2rem", width: "100%", maxWidth: "600px", maxHeight: "90vh", overflowY: "auto" },
+  modalHeader:     { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" },
+  modalTitre:      { fontSize: "18px", fontWeight: "700" },
+  modalFooter:     { display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "1.5rem" },
+  label:           { display: "block", fontSize: "13px", fontWeight: "500", color: "#444", marginBottom: "6px" },
+  input:           { width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1.5px solid #e0e0e0", fontSize: "14px", background: "#fafafa" },
 };
