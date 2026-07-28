@@ -18,16 +18,27 @@ def get_token_asso_pro(username, password):
     return None
 
 
-def importer_organisations_asso_pro():
+def importer_organisations_asso_pro(username=None, password=None):
     """
     Récupère toutes les organisations depuis ASSO-PRO
-    avec leur niveau de professionnalisation (diagnostic)
-    et les importe dans notre base comme Structure de type 'association'
+    Nécessite maintenant une authentification JWT
     """
     try:
-        # ── 1. Récupérer la liste des organisations ──
+        # ── 1. Obtenir le token ──
+        token = None
+        if username and password:
+            token = get_token_asso_pro(username, password)
+            if not token:
+                return {"erreur": "Identifiants ASSO-PRO incorrects.", "importees": 0}
+
+        headers = {}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+
+        # ── 2. Récupérer la liste des organisations ──
         response = requests.get(
             f"{ASSO_PRO_BASE_URL}/users/organisations/",
+            headers=headers,
             timeout=10
         )
         if response.status_code != 200:
@@ -43,34 +54,36 @@ def importer_organisations_asso_pro():
                 org_id = org.get("id", "")
                 nom    = org.get("nom", "")
 
-                # Vérifie si la structure existe déjà
                 if Structure.objects.filter(nom=nom, type="association").exists():
                     doublons += 1
                     continue
 
-                # ── 2. Récupérer le niveau de professionnalisation ──
+                # ── 3. Récupérer le niveau de professionnalisation ──
                 niveau_pro = ""
                 try:
                     diag_response = requests.get(
                         f"{ASSO_PRO_BASE_URL}/diagnostics/by-org/{org_id}/",
+                        headers=headers,
                         timeout=5
                     )
                     if diag_response.status_code == 200:
-                        diag_data = diag_response.json()
-                        score_total        = diag_data.get("score_total", "")
-                        niveau             = diag_data.get("niveau", "")
-                        professionalism    = diag_data.get("professionalism_level", "")
+                        diag_data       = diag_response.json()
+                        score_total     = diag_data.get("score_total", "")
+                        niveau          = diag_data.get("niveau", "")
+                        professionalism = diag_data.get("professionalism_level", "")
                         if score_total:
                             niveau_pro = f"Score : {score_total}/100 — {niveau} ({professionalism})"
                 except Exception:
-                    pass  # Si le diagnostic échoue, on continue quand même
+                    pass
 
-                # ── 3. Créer la structure dans notre base ──
+                # ── 4. Créer la structure ──
                 Structure.objects.create(
                     nom=nom,
                     type="association",
                     secteur=org.get("type_nom", ""),
                     contact_email=org.get("email", ""),
+                    contact_tel=org.get("contact", ""),
+                    contact_nom=f"{org.get('ville', '')} — {org.get('pays', '')}".strip(" —"),
                     description=f"Importée depuis ASSO-PRO — ID: {org_id}",
                     niveau_professionnalisation=niveau_pro,
                 )

@@ -1,26 +1,32 @@
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 
+// ─── Navigation avec permissions par rôle ─────────────────────────────────────
+
 const navItems = [
-  { path: "/", label: "Dashboard", icon: "📊" },
-  { path: "/beneficiaires", label: "Bénéficiaires", icon: "👥" },
-  { path: "/programmes", label: "Programmes", icon: "📋" },
-  { path: "/inscriptions", label: "Inscriptions", icon: "📝" },
-  { path: "/suivi", label: "Suivi Insertion", icon: "📈" },
-  { path: "/structures", label: "Structures", icon: "🏢" },
+  { path: "/",             label: "Dashboard",       icon: "📊", roles: ["direction", "merl"] },
+  { path: "/beneficiaires",label: "Bénéficiaires",   icon: "👥", roles: ["direction", "merl", "responsable", "terrain"] },
+  { path: "/programmes",   label: "Programmes",      icon: "📋", roles: ["direction", "merl", "responsable", "terrain"] },
+  { path: "/inscriptions", label: "Inscriptions",    icon: "📝", roles: ["direction", "merl", "responsable", "terrain"] },
+  { path: "/suivi",        label: "Suivi Insertion", icon: "📈", roles: ["direction", "merl"] },
+  { path: "/structures",   label: "Structures",      icon: "🏢", roles: ["direction", "merl", "terrain"] },
 ];
 
 const navBottom = [
-  { path: "/financements", label: "Financements", icon: "💰" },
-  { path: "/documents", label: "Documents", icon: "📁" },
+  { path: "/financements", label: "Financements", icon: "💰", roles: ["direction", "finances"] },
+  { path: "/documents",    label: "Documents",    icon: "📁", roles: ["direction", "merl", "responsable", "terrain", "finances"] },
 ];
+
+// ─── Composant ────────────────────────────────────────────────────────────────
 
 export default function Sidebar() {
   const { deconnexion, utilisateur } = useAuth();
+  const role = utilisateur?.role || "";
 
   return (
     <aside style={styles.sidebar}>
-      {/* Logo */}
+
+      {/* ── Logo ── */}
       <div style={styles.logo}>
         <div style={styles.logoCircle}>IL</div>
         <div>
@@ -29,10 +35,10 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Navigation principale */}
+      {/* ── Navigation principale ── */}
       <nav style={styles.nav}>
         <div style={styles.navSection}>Menu principal</div>
-        {navItems.map((item) => (
+        {navItems.filter(item => item.roles.includes(role)).map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
@@ -48,7 +54,7 @@ export default function Sidebar() {
         ))}
 
         <div style={{ ...styles.navSection, marginTop: "1.5rem" }}>Gestion</div>
-        {navBottom.map((item) => (
+        {navBottom.filter(item => item.roles.includes(role)).map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
@@ -63,7 +69,7 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* Utilisateur connecté */}
+      {/* ── Utilisateur connecté ── */}
       <div style={styles.userZone}>
         <div style={styles.userInfo}>
           <div style={styles.userAvatar}>
@@ -81,6 +87,8 @@ export default function Sidebar() {
     </aside>
   );
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = {
   sidebar: {
@@ -116,8 +124,8 @@ const styles = {
     flexShrink: 0,
   },
   logoTitle: { fontWeight: "600", fontSize: "14px", color: "#1a1a1a" },
-  logoSub: { fontSize: "11px", color: "#999" },
-  nav: { flex: 1, padding: "1rem 0.75rem", overflowY: "auto" },
+  logoSub:   { fontSize: "11px", color: "#999" },
+  nav:       { flex: 1, padding: "1rem 0.75rem", overflowY: "auto" },
   navSection: {
     fontSize: "11px",
     color: "#aaa",
@@ -166,8 +174,8 @@ const styles = {
     fontSize: "13px",
     flexShrink: 0,
   },
-  userName: { fontSize: "13px", fontWeight: "500", color: "#1a1a1a" },
-  userRole: { fontSize: "11px", color: "#999", textTransform: "capitalize" },
+  userName:  { fontSize: "13px", fontWeight: "500", color: "#1a1a1a" },
+  userRole:  { fontSize: "11px", color: "#999", textTransform: "capitalize" },
   logoutBtn: {
     width: "100%",
     padding: "8px",
@@ -177,5 +185,7 @@ const styles = {
     fontSize: "12px",
     fontWeight: "500",
     textAlign: "center",
+    border: "none",
+    cursor: "pointer",
   },
 };

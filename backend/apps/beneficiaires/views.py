@@ -199,5 +199,7 @@ class ImportAssoproView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        resultat = importer_organisations_asso_pro()
+        username = request.data.get("username")
+        password = request.data.get("password")
+        resultat = importer_organisations_asso_pro(username, password)
         return Response(resultat)

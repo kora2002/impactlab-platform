@@ -129,12 +129,16 @@ export default function Beneficiaires() {
   };
 
   // ── Import ASSO-PRO ──
+ 
   const handleImportAssoPro = () => {
-    if (window.confirm("Importer les organisations depuis ASSO-PRO ?")) {
-      api.post("beneficiaires/import-asso-pro/")
-        .then((res) => { alert(res.data.message); charger(); })
-        .catch(() => alert("Erreur lors de l'import ASSO-PRO."));
-    }
+    const username = window.prompt("Nom d'utilisateur ASSO-PRO :");
+    if (!username) return;
+    const password = window.prompt("Mot de passe ASSO-PRO :");
+    if (!password) return;
+  
+    api.post("beneficiaires/import-asso-pro/", { username, password })
+      .then((res) => { alert(res.data.message || res.data.erreur); charger(); })
+      .catch(() => alert("Erreur lors de l'import ASSO-PRO."));
   };
 
   // ── Rendu ──
