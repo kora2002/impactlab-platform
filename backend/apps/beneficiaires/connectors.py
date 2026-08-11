@@ -5,9 +5,9 @@ ASSO_PRO_BASE_URL = "https://addj.impactlab-cilis.org/api"
 ASSO_PRO_USERNAME = "crm_service"
 ASSO_PRO_PASSWORD = "fwTXAxfmpkqdUgtXtXrhm25GKkG2"
 
-SAGEO_BASE_URL    = "https://api-sageo.impactlab-cilis.org/api/v1"
-SAGEO_EMAIL       = "crm-sageo@impactlab-cilis.org"
-SAGEO_PASSWORD    = "JjSaeSRhZuwpbzRWPCZqFRJMt5qp"
+SAGEO_BASE_URL = "https://api-sageo.impactlab-cilis.org/api/v1"
+SAGEO_EMAIL    = "crm-sageo@impactlab-cilis.org"
+SAGEO_PASSWORD = "JjSaeSRhZuwpbzRWPCZqFRJMt5qp"
 
 
 def get_token_asso_pro():
@@ -107,6 +107,7 @@ def importer_organisations_asso_pro():
                     contact_nom=org.get("ville", ""),
                     description=f"Importée depuis ASSO-PRO — ID: {org_id} — {org.get('pays', '')}",
                     niveau_professionnalisation=niveau_pro,
+                    source="asso_pro",
                 )
                 importees += 1
 
@@ -146,8 +147,8 @@ def importer_porteurs_sageo():
         if response.status_code != 200:
             return {"erreur": f"Erreur API SAGEO : {response.status_code}", "importees": 0}
 
-        data      = response.json()
-        porteurs  = data.get("porteurs", [])
+        data     = response.json()
+        porteurs = data.get("porteurs", [])
         importees = 0
         doublons  = 0
         erreurs   = []
@@ -167,6 +168,7 @@ def importer_porteurs_sageo():
                     contact_email=porteur.get("email", ""),
                     contact_tel=porteur.get("telephone", ""),
                     description=f"Importé depuis SAGEO/IGBS — Phase : {porteur.get('phase', '')}",
+                    source="sageo",
                 )
                 importees += 1
 

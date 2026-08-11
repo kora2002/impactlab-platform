@@ -97,6 +97,7 @@ class StructureSerializer(serializers.ModelSerializer):
 
 class StructureListSerializer(serializers.ModelSerializer):
     type_display   = serializers.CharField(source='get_type_display', read_only=True)
+    source_display = serializers.CharField(source='get_source_display', read_only=True)
     nombre_membres = serializers.SerializerMethodField()
 
     class Meta:
@@ -105,6 +106,7 @@ class StructureListSerializer(serializers.ModelSerializer):
             'id', 'nom', 'type', 'type_display',
             'secteur', 'nombre_membres',
             'niveau_professionnalisation',
+            'source', 'source_display',
         ]
 
     def get_nombre_membres(self, obj):

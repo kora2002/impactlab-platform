@@ -120,20 +120,32 @@ export default function Structures() {
     <div>
 
       {/* ── EN-TÊTE ── */}
-      <div style={s.header}>
-        <div>
-          <h1 style={s.titre}>Structures</h1>
-          <p style={s.sousTitre}>Associations, entreprises incubées et établissements scolaires</p>
-        </div>
-        <div style={{ display: "flex", gap: "12px" }}>
-          <button onClick={handleImportAssoPro} style={s.btnAssoPro}>
-            🔗 Import ASSO-PRO
-          </button>
-          <button onClick={() => { setShowModal(true); setErreur(""); setSucces(""); }} style={s.btnPrimary}>
-            + Nouvelle structure
-          </button>
-        </div>
-      </div>
+<div style={s.header}>
+  <div>
+    <h1 style={s.titre}>Structures</h1>
+    <p style={s.sousTitre}>Associations, entreprises incubées et établissements scolaires</p>
+  </div>
+  <div style={{ display: "flex", gap: "12px" }}>
+    <button onClick={handleImportAssoPro} style={s.btnAssoPro}>
+      🔗 Import ASSO-PRO
+    </button>
+    <button
+      onClick={() => {
+        if (window.confirm("Importer les porteurs de projets depuis SAGEO/IGBS ?")) {
+          api.post("beneficiaires/import-sageo/")
+            .then((res) => { alert(res.data.message); charger(); })
+            .catch(() => alert("Erreur lors de l'import SAGEO."));
+        }
+      }}
+      style={{ padding: "10px 18px", background: "#7F77DD", color: "#fff", borderRadius: "8px", fontWeight: "600", fontSize: "14px", border: "none", cursor: "pointer" }}
+    >
+      🔗 Import SAGEO
+    </button>
+    <button onClick={() => { setShowModal(true); setErreur(""); setSucces(""); }} style={s.btnPrimary}>
+      + Nouvelle structure
+    </button>
+  </div>
+</div>
 
       {/* ── MESSAGE SUCCÈS ── */}
       {succes && <div style={s.alertSuccess}>✅ {succes}</div>}
@@ -149,7 +161,7 @@ export default function Structures() {
         </select>
       </div>
 
-      {/* ── TABLEAU ── */}
+   {/* ── TABLEAU ── */}
 <div style={s.card}>
   <div style={s.cardTitle}>{structures.length} structure(s)</div>
 
@@ -161,7 +173,7 @@ export default function Structures() {
     <table style={s.table}>
       <thead>
         <tr>
-          {["Nom", "Type", "Secteur", "Niveau de professionnalisation", "Membres", "Actions"].map((col) => (
+          {["Nom", "Type", "Source", "Secteur", "Niveau de professionnalisation", "Membres", "Actions"].map((col) => (
             <th key={col} style={s.th}>{col}</th>
           ))}
         </tr>
@@ -177,6 +189,19 @@ export default function Structures() {
             <td style={s.td}>
               <span style={{ ...s.badge, ...(TYPE_COLORS[st.type] || {}) }}>
                 {st.type_display}
+              </span>
+            </td>
+
+            {/* Source */}
+            <td style={s.td}>
+              <span style={{
+                padding: "3px 10px", borderRadius: "20px", fontSize: "12px", fontWeight: "600",
+                background: st.source === "asso_pro" ? "#EEF5F7" :
+                            st.source === "sageo"    ? "#F5F3FF" : "#f0f0f0",
+                color: st.source === "asso_pro" ? "#1F4E5F" :
+                       st.source === "sageo"    ? "#5B21B6" : "#555",
+              }}>
+                {st.source_display}
               </span>
             </td>
 

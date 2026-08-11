@@ -58,6 +58,11 @@ class Structure(models.Model):
         ENTREPRISE    = 'entreprise',    'Entreprise incubée'
         ETABLISSEMENT = 'etablissement', 'Établissement scolaire'
 
+    class Source(models.TextChoices):
+        MANUEL   = 'manuel',   'Saisie manuelle'
+        ASSO_PRO = 'asso_pro', 'ASSO-PRO'
+        SAGEO    = 'sageo',    'SAGEO/IGBS'
+
     nom           = models.CharField(max_length=200)
     type          = models.CharField(max_length=20, choices=Type.choices)
     secteur       = models.CharField(max_length=200, blank=True)
@@ -72,6 +77,14 @@ class Structure(models.Model):
         blank=True,
         default="",
         verbose_name="Niveau de professionnalisation"
+    )
+
+    # Source d'import
+    source = models.CharField(
+        max_length=20,
+        choices=Source.choices,
+        default='manuel',
+        verbose_name="Source"
     )
 
     # Membres / porteurs de projet
