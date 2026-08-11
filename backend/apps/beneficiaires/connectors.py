@@ -2,38 +2,58 @@ import requests
 from .models import Structure
 
 ASSO_PRO_BASE_URL = "https://addj.impactlab-cilis.org/api"
+ASSO_PRO_USERNAME = "crm_service"
+ASSO_PRO_PASSWORD = "fwTXAxfmpkqdUgtXtXrhm25GKkG2"
+
+SAGEO_BASE_URL    = "https://api-sageo.impactlab-cilis.org/api/v1"
+SAGEO_EMAIL       = "crm-sageo@impactlab-cilis.org"
+SAGEO_PASSWORD    = "JjSaeSRhZuwpbzRWPCZqFRJMt5qp"
 
 
-def get_token_asso_pro(username, password):
-    """
-    Obtenir un token JWT depuis ASSO-PRO
-    """
-    response = requests.post(
-        f"{ASSO_PRO_BASE_URL}/users/login/",
-        json={"username": username, "password": password},
-        timeout=10
-    )
-    if response.status_code == 200:
-        return response.json().get("access")
-    return None
+def get_token_asso_pro():
+    """Obtenir un token JWT depuis ASSO-PRO"""
+    try:
+        response = requests.post(
+            f"{ASSO_PRO_BASE_URL}/users/login/",
+            json={"username": ASSO_PRO_USERNAME, "password": ASSO_PRO_PASSWORD},
+            timeout=10
+        )
+        if response.status_code == 200:
+            return response.json().get("access")
+        return None
+    except Exception:
+        return None
 
 
-def importer_organisations_asso_pro(username=None, password=None):
+def get_cookies_sageo():
+    """Obtenir les cookies de session depuis SAGEO"""
+    try:
+        session = requests.Session()
+        response = session.post(
+            f"{SAGEO_BASE_URL}/auth/login",
+            json={"email": SAGEO_EMAIL, "password": SAGEO_PASSWORD},
+            timeout=10
+        )
+        if response.status_code == 200:
+            return session.cookies
+        return None
+    except Exception:
+        return None
+
+
+def importer_organisations_asso_pro():
     """
     Récupère toutes les organisations depuis ASSO-PRO
-    Nécessite maintenant une authentification JWT
+    avec leur niveau de professionnalisation (diagnostic)
+    et les importe dans notre base comme Structure de type 'association'
     """
     try:
-        # ── 1. Obtenir le token ──
-        token = None
-        if username and password:
-            token = get_token_asso_pro(username, password)
-            if not token:
-                return {"erreur": "Identifiants ASSO-PRO incorrects.", "importees": 0}
+        # ── 1. Authentification ──
+        token = get_token_asso_pro()
+        if not token:
+            return {"erreur": "Impossible de s'authentifier à ASSO-PRO.", "importees": 0}
 
-        headers = {}
-        if token:
-            headers["Authorization"] = f"Bearer {token}"
+        headers = {"Authorization": f"Bearer {token}"}
 
         # ── 2. Récupérer la liste des organisations ──
         response = requests.get(
@@ -54,6 +74,7 @@ def importer_organisations_asso_pro(username=None, password=None):
                 org_id = org.get("id", "")
                 nom    = org.get("nom", "")
 
+                # Vérifie si la structure existe déjà
                 if Structure.objects.filter(nom=nom, type="association").exists():
                     doublons += 1
                     continue
@@ -83,8 +104,8 @@ def importer_organisations_asso_pro(username=None, password=None):
                     secteur=org.get("type_nom", ""),
                     contact_email=org.get("email", ""),
                     contact_tel=org.get("contact", ""),
-                    contact_nom=f"{org.get('ville', '')} — {org.get('pays', '')}".strip(" —"),
-                    description=f"Importée depuis ASSO-PRO — ID: {org_id}",
+                    contact_nom=org.get("ville", ""),
+                    description=f"Importée depuis ASSO-PRO — ID: {org_id} — {org.get('pays', '')}",
                     niveau_professionnalisation=niveau_pro,
                 )
                 importees += 1
@@ -101,5 +122,65 @@ def importer_organisations_asso_pro(username=None, password=None):
 
     except requests.exceptions.ConnectionError:
         return {"erreur": "Impossible de contacter l'API ASSO-PRO.", "importees": 0}
+    except Exception as e:
+        return {"erreur": str(e), "importees": 0}
+
+
+def importer_porteurs_sageo():
+    """
+    Récupère les porteurs de projets depuis SAGEO/IGBS
+    et les importe dans notre base comme Structures de type 'entreprise'
+    """
+    try:
+        # ── 1. Authentification ──
+        cookies = get_cookies_sageo()
+        if not cookies:
+            return {"erreur": "Impossible de s'authentifier à SAGEO.", "importees": 0}
+
+        # ── 2. Récupérer les porteurs ──
+        response = requests.get(
+            f"{SAGEO_BASE_URL}/staff/porteurs",
+            cookies=cookies,
+            timeout=10
+        )
+        if response.status_code != 200:
+            return {"erreur": f"Erreur API SAGEO : {response.status_code}", "importees": 0}
+
+        data      = response.json()
+        porteurs  = data.get("porteurs", [])
+        importees = 0
+        doublons  = 0
+        erreurs   = []
+
+        for porteur in porteurs:
+            try:
+                nom = porteur.get("nom_complet") or f"{porteur.get('prenom', '')} {porteur.get('nom', '')}".strip()
+
+                if Structure.objects.filter(nom=nom, type="entreprise").exists():
+                    doublons += 1
+                    continue
+
+                Structure.objects.create(
+                    nom=nom,
+                    type="entreprise",
+                    secteur=porteur.get("secteur", ""),
+                    contact_email=porteur.get("email", ""),
+                    contact_tel=porteur.get("telephone", ""),
+                    description=f"Importé depuis SAGEO/IGBS — Phase : {porteur.get('phase', '')}",
+                )
+                importees += 1
+
+            except Exception as e:
+                erreurs.append(f"Erreur pour {porteur.get('nom', '?')} : {str(e)}")
+
+        return {
+            "importees": importees,
+            "doublons":  doublons,
+            "erreurs":   erreurs,
+            "message":   f"{importees} porteur(s) importé(s) depuis SAGEO/IGBS."
+        }
+
+    except requests.exceptions.ConnectionError:
+        return {"erreur": "Impossible de contacter l'API SAGEO.", "importees": 0}
     except Exception as e:
         return {"erreur": str(e), "importees": 0}

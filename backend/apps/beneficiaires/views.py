@@ -12,7 +12,7 @@ from .serializers import (
     MembreStructureSerializer,
 )
 from .connectors import importer_organisations_asso_pro
-
+from .connectors import importer_organisations_asso_pro, importer_porteurs_sageo
 
 class BeneficiaireListCreateView(generics.ListCreateAPIView):
     """
@@ -199,7 +199,14 @@ class ImportAssoproView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        username = request.data.get("username")
-        password = request.data.get("password")
-        resultat = importer_organisations_asso_pro(username, password)
+        resultat = importer_organisations_asso_pro()
+        return Response(resultat)
+    
+
+class ImportSageoView(APIView):
+    """POST /api/beneficiaires/import-sageo/"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        resultat = importer_porteurs_sageo()
         return Response(resultat)
