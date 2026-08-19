@@ -13,11 +13,9 @@ from .serializers import (
 )
 # from .connectors import importer_organisations_asso_pro
 # from .connectors import importer_organisations_asso_pro, importer_porteurs_sageo
-from .connectors import (
-    importer_organisations_asso_pro,
-    importer_entreprises_sageo,
-    importer_porteurs_igbs,
-)
+
+from .connectors import importer_organisations_asso_pro, importer_entreprises_sageo, importer_porteurs_igbs, get_cours_moodle
+
 
 class BeneficiaireListCreateView(generics.ListCreateAPIView):
     """
@@ -223,4 +221,13 @@ class ImportIGBSView(APIView):
 
     def post(self, request):
         resultat = importer_porteurs_igbs()
+        return Response(resultat)
+    
+
+class CoursAcademyView(APIView):
+    """GET /api/beneficiaires/cours-academy/"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        resultat = get_cours_moodle()
         return Response(resultat)

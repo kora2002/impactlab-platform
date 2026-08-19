@@ -9,6 +9,10 @@ SAGEO_BASE_URL = "https://api-sageo.impactlab-cilis.org/api/v1"
 SAGEO_EMAIL    = "crm-sageo@impactlab-cilis.org"
 SAGEO_PASSWORD = "JjSaeSRhZuwpbzRWPCZqFRJMt5qp"
 
+MOODLE_BASE_URL = "https://academy.impactlab-cilis.org/webservice/rest/server.php"
+MOODLE_TOKEN    = "6e5d883d537c460e1054f7ab2cd57c54"
+
+
 
 def get_token_asso_pro():
     """Obtenir un token JWT depuis ASSO-PRO"""
@@ -252,3 +256,47 @@ def importer_porteurs_igbs():
         return {"erreur": "Impossible de contacter l'API IGBS.", "importees": 0}
     except Exception as e:
         return {"erreur": str(e), "importees": 0}
+    
+
+def get_cours_moodle():
+    """
+    Récupère la liste des cours depuis Impact'Lab Academy (Moodle)
+    """
+    try:
+        response = requests.get(
+            MOODLE_BASE_URL,
+            params={
+                "wstoken":            MOODLE_TOKEN,
+                "wsfunction":         "core_course_get_courses",
+                "moodlewsrestformat": "json",
+            },
+            timeout=10
+        )
+        if response.status_code != 200:
+            return {"erreur": f"Erreur API Moodle : {response.status_code}", "cours": []}
+
+        cours = response.json()
+
+        # Filtrer le cours "site" (id=1) qui est le site lui-même
+        cours_filtres = [
+            {
+                "id":          c.get("id"),
+                "nom":         c.get("fullname", ""),
+                "code":        c.get("shortname", ""),
+                "categorie_id": c.get("categoryid"),
+                "visible":     c.get("visible", 1),
+                "resume":      c.get("summary", ""),
+            }
+            for c in cours if c.get("id") != 1
+        ]
+
+        return {
+            "total":  len(cours_filtres),
+            "cours":  cours_filtres,
+            "message": f"{len(cours_filtres)} cours récupéré(s) depuis Impact'Lab Academy."
+        }
+
+    except requests.exceptions.ConnectionError:
+        return {"erreur": "Impossible de contacter Impact'Lab Academy.", "cours": []}
+    except Exception as e:
+        return {"erreur": str(e), "cours": []}

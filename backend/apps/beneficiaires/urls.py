@@ -19,5 +19,6 @@ urlpatterns = [
 
     path('beneficiaires/import-sageo/', views.ImportSageoView.as_view(), name='import_sageo'),
     path('beneficiaires/import-igbs/',  views.ImportIGBSView.as_view(),  name='import_igbs'),
+    path('beneficiaires/cours-academy/', views.CoursAcademyView.as_view(), name='cours_academy'),
 
 ]

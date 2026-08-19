@@ -10,6 +10,7 @@ const navItems = [
   { path: "/inscriptions", label: "Inscriptions",    icon: "📝", roles: ["direction", "merl", "responsable", "terrain"] },
   { path: "/suivi",        label: "Suivi Insertion", icon: "📈", roles: ["direction", "merl"] },
   { path: "/structures",   label: "Structures",      icon: "🏢", roles: ["direction", "merl", "terrain"] },
+  { path: "/academy", label: "Academy", icon: "🎓", roles: ["direction", "merl", "responsable", "terrain"] },
 ];
 
 const navBottom = [
