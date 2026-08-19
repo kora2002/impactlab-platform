@@ -26,7 +26,7 @@ def get_token_asso_pro():
 
 
 def get_cookies_sageo():
-    """Obtenir les cookies de session depuis SAGEO"""
+    """Obtenir les cookies de session depuis SAGEO/IGBS"""
     try:
         session = requests.Session()
         response = session.post(
@@ -74,7 +74,6 @@ def importer_organisations_asso_pro():
                 org_id = org.get("id", "")
                 nom    = org.get("nom", "")
 
-                # Vérifie si la structure existe déjà
                 if Structure.objects.filter(nom=nom, type="association").exists():
                     doublons += 1
                     continue
@@ -127,10 +126,10 @@ def importer_organisations_asso_pro():
         return {"erreur": str(e), "importees": 0}
 
 
-def importer_porteurs_sageo():
+def importer_entreprises_sageo():
     """
-    Récupère les porteurs de projets depuis SAGEO/IGBS
-    et les importe dans notre base comme Structures de type 'entreprise'
+    Récupère les entreprises accompagnées depuis SAGEO
+    et les importe dans notre base comme Structure de type 'entreprise'
     """
     try:
         # ── 1. Authentification ──
@@ -138,14 +137,76 @@ def importer_porteurs_sageo():
         if not cookies:
             return {"erreur": "Impossible de s'authentifier à SAGEO.", "importees": 0}
 
-        # ── 2. Récupérer les porteurs ──
+        # ── 2. Récupérer les entreprises SAGEO ──
+        response = requests.get(
+            f"{SAGEO_BASE_URL}/staff/entreprises",
+            cookies=cookies,
+            timeout=10
+        )
+        if response.status_code != 200:
+            return {"erreur": f"Erreur API SAGEO : {response.status_code}", "importees": 0}
+
+        data       = response.json()
+        entreprises = data.get("entreprises", [])
+        importees  = 0
+        doublons   = 0
+        erreurs    = []
+
+        for entreprise in entreprises:
+            try:
+                nom = entreprise.get("nom", "")
+
+                if Structure.objects.filter(nom=nom, type="entreprise").exists():
+                    doublons += 1
+                    continue
+
+                Structure.objects.create(
+                    nom=nom,
+                    type="entreprise",
+                    secteur=entreprise.get("secteur", ""),
+                    contact_email=entreprise.get("email", ""),
+                    contact_tel=entreprise.get("telephone", ""),
+                    description=f"Importée depuis SAGEO — Statut : {entreprise.get('statut', '')}",
+                    source="sageo",
+                )
+                importees += 1
+
+            except Exception as e:
+                erreurs.append(f"Erreur pour {entreprise.get('nom', '?')} : {str(e)}")
+
+        return {
+            "importees": importees,
+            "doublons":  doublons,
+            "erreurs":   erreurs,
+            "message":   f"{importees} entreprise(s) importée(s) depuis SAGEO."
+        }
+
+    except requests.exceptions.ConnectionError:
+        return {"erreur": "Impossible de contacter l'API SAGEO.", "importees": 0}
+    except Exception as e:
+        return {"erreur": str(e), "importees": 0}
+
+
+def importer_porteurs_igbs():
+    """
+    Récupère les porteurs de projets IGBS depuis SAGEO
+    et les importe dans notre base comme Bénéficiaires
+    """
+    from apps.beneficiaires.models import Beneficiaire
+    try:
+        # ── 1. Authentification ──
+        cookies = get_cookies_sageo()
+        if not cookies:
+            return {"erreur": "Impossible de s'authentifier à SAGEO.", "importees": 0}
+
+        # ── 2. Récupérer les porteurs IGBS ──
         response = requests.get(
             f"{SAGEO_BASE_URL}/staff/porteurs",
             cookies=cookies,
             timeout=10
         )
         if response.status_code != 200:
-            return {"erreur": f"Erreur API SAGEO : {response.status_code}", "importees": 0}
+            return {"erreur": f"Erreur API IGBS : {response.status_code}", "importees": 0}
 
         data     = response.json()
         porteurs = data.get("porteurs", [])
@@ -155,20 +216,25 @@ def importer_porteurs_sageo():
 
         for porteur in porteurs:
             try:
-                nom = porteur.get("nom_complet") or f"{porteur.get('prenom', '')} {porteur.get('nom', '')}".strip()
+                email     = porteur.get("email", "")
+                telephone = porteur.get("telephone", "") or "N/A"
+                nom       = porteur.get("nom", "")
+                prenom    = porteur.get("prenom", "")
 
-                if Structure.objects.filter(nom=nom, type="entreprise").exists():
+                # Vérifie si le bénéficiaire existe déjà
+                if (email and Beneficiaire.objects.filter(email=email).exists()) or \
+                   Beneficiaire.objects.filter(telephone=telephone).exists():
                     doublons += 1
                     continue
 
-                Structure.objects.create(
+                Beneficiaire.objects.create(
                     nom=nom,
-                    type="entreprise",
-                    secteur=porteur.get("secteur", ""),
-                    contact_email=porteur.get("email", ""),
-                    contact_tel=porteur.get("telephone", ""),
-                    description=f"Importé depuis SAGEO/IGBS — Phase : {porteur.get('phase', '')}",
-                    source="sageo",
+                    prenom=prenom,
+                    genre=porteur.get("genre", "homme"),
+                    email=email,
+                    telephone=telephone,
+                    localite=porteur.get("ville", ""),
+                    statut_pro="entrepreneur",
                 )
                 importees += 1
 
@@ -179,10 +245,10 @@ def importer_porteurs_sageo():
             "importees": importees,
             "doublons":  doublons,
             "erreurs":   erreurs,
-            "message":   f"{importees} porteur(s) importé(s) depuis SAGEO/IGBS."
+            "message":   f"{importees} porteur(s) IGBS importé(s) comme bénéficiaires."
         }
 
     except requests.exceptions.ConnectionError:
-        return {"erreur": "Impossible de contacter l'API SAGEO.", "importees": 0}
+        return {"erreur": "Impossible de contacter l'API IGBS.", "importees": 0}
     except Exception as e:
         return {"erreur": str(e), "importees": 0}

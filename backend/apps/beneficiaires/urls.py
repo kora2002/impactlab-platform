@@ -18,4 +18,6 @@ urlpatterns = [
     path('structures/<int:structure_id>/membres/', views.AjouterMembreStructureView.as_view(), name='ajouter_membre'),
 
     path('beneficiaires/import-sageo/', views.ImportSageoView.as_view(), name='import_sageo'),
+    path('beneficiaires/import-igbs/',  views.ImportIGBSView.as_view(),  name='import_igbs'),
+
 ]

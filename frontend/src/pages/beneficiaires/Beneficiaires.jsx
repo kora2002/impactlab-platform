@@ -146,26 +146,38 @@ export default function Beneficiaires() {
     <div>
 
       {/* ── EN-TÊTE ── */}
-      <div style={s.header}>
-        <div>
-          <h1 style={s.titre}>Bénéficiaires</h1>
-          <p style={s.sousTitre}>Gestion des fiches bénéficiaires</p>
-        </div>
-        <div style={{ display: "flex", gap: "12px" }}>
-          <button
-            onClick={() => { setShowModalImport(true); setResultImport(null); }}
-            style={s.btnSecondary}
-          >
-            📥 Import Excel
-          </button>
-          <button onClick={handleImportAssoPro} style={s.btnAssoPro}>
-            🔗 Import ASSO-PRO
-          </button>
-          <button onClick={() => setShowModal(true)} style={s.btnPrimary}>
-            + Nouveau bénéficiaire
-          </button>
-        </div>
-      </div>
+<div style={s.header}>
+  <div>
+    <h1 style={s.titre}>Bénéficiaires</h1>
+    <p style={s.sousTitre}>Gestion des fiches bénéficiaires</p>
+  </div>
+  <div style={{ display: "flex", gap: "12px" }}>
+    <button
+      onClick={() => { setShowModalImport(true); setResultImport(null); }}
+      style={s.btnSecondary}
+    >
+      📥 Import Excel
+    </button>
+    <button onClick={handleImportAssoPro} style={s.btnAssoPro}>
+      🔗 Import ASSO-PRO
+    </button>
+    <button
+      onClick={() => {
+        if (window.confirm("Importer les porteurs de projets IGBS comme bénéficiaires ?")) {
+          api.post("beneficiaires/import-igbs/")
+            .then((res) => { alert(res.data.message); charger(); })
+            .catch(() => alert("Erreur lors de l'import IGBS."));
+        }
+      }}
+      style={{ padding: "10px 18px", background: "#7F77DD", color: "#fff", borderRadius: "8px", fontWeight: "600", fontSize: "14px", border: "none", cursor: "pointer" }}
+    >
+      🔗 Import IGBS
+    </button>
+    <button onClick={() => setShowModal(true)} style={s.btnPrimary}>
+      + Nouveau bénéficiaire
+    </button>
+  </div>
+</div>
 
       {/* ── FILTRES ── */}
       <div style={s.card}>

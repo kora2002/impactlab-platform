@@ -11,8 +11,13 @@ from .serializers import (
     StructureListSerializer,
     MembreStructureSerializer,
 )
-from .connectors import importer_organisations_asso_pro
-from .connectors import importer_organisations_asso_pro, importer_porteurs_sageo
+# from .connectors import importer_organisations_asso_pro
+# from .connectors import importer_organisations_asso_pro, importer_porteurs_sageo
+from .connectors import (
+    importer_organisations_asso_pro,
+    importer_entreprises_sageo,
+    importer_porteurs_igbs,
+)
 
 class BeneficiaireListCreateView(generics.ListCreateAPIView):
     """
@@ -208,5 +213,14 @@ class ImportSageoView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        resultat = importer_porteurs_sageo()
+        resultat = importer_entreprises_sageo()
+        return Response(resultat)
+
+
+class ImportIGBSView(APIView):
+    """POST /api/beneficiaires/import-igbs/"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        resultat = importer_porteurs_igbs()
         return Response(resultat)
