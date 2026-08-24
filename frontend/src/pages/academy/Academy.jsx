@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import api from "../../services/api";
 
 export default function Academy() {
-  const [cours, setCours]           = useState([]);
-  const [chargement, setChargement] = useState(true);
-  const [erreur, setErreur]         = useState("");
+  const [cours, setCours]             = useState([]);
+  const [chargement, setChargement]   = useState(true);
+  const [erreur, setErreur]           = useState("");
+  const [showModal, setShowModal]     = useState(false);
+  const [coursSelectionne, setCoursSelectionne] = useState(null);
 
   const charger = () => {
     setChargement(true);
@@ -15,6 +17,11 @@ export default function Academy() {
   };
 
   useEffect(() => { charger(); }, []);
+
+  const ouvrirInscrits = (cours) => {
+    setCoursSelectionne(cours);
+    setShowModal(true);
+  };
 
   return (
     <div>
@@ -55,7 +62,7 @@ export default function Academy() {
               {/* Résumé */}
               {c.resume && (
                 <div style={s.resume}>
-                  {c.resume.replace(/<[^>]*>/g, "").substring(0, 150)}...
+                  {c.resume.replace(/<[^>]*>/g, "").substring(0, 120)}...
                 </div>
               )}
 
@@ -64,17 +71,60 @@ export default function Academy() {
                 <span style={s.badgeCategorie}>
                   {c.categorie_id === 9 ? "ASSO-PRO" : c.categorie_id === 2 ? "IGBS" : "Autre"}
                 </span>
-                
-                 <a href={`https://academy.impactlab-cilis.org/course/view.php?id=${c.id}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={s.lien}
+                <button
+                  onClick={() => ouvrirInscrits(c)}
+                  style={s.btnInscrits}
                 >
-                  Voir le cours
-              </a>
+                  👥 {c.nb_inscrits} inscrit(s)
+                </button>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ── MODAL INSCRITS ── */}
+      {showModal && coursSelectionne && (
+        <div style={s.overlay}>
+          <div style={s.modal}>
+            <div style={s.modalHeader}>
+              <div>
+                <h2 style={s.modalTitre}>{coursSelectionne.nom}</h2>
+                <p style={{ fontSize: "13px", color: "#888", margin: 0 }}>
+                  {coursSelectionne.nb_inscrits} inscrit(s)
+                </p>
+              </div>
+              <button onClick={() => setShowModal(false)} style={s.btnClose}>✕</button>
+            </div>
+
+            {coursSelectionne.inscrits.length === 0 ? (
+              <div style={s.center}>Aucun inscrit dans ce cours.</div>
+            ) : (
+              <table style={s.table}>
+                <thead>
+                  <tr>
+                    {["Nom complet", "Email", "Pays", "Dernière connexion"].map((col) => (
+                      <th key={col} style={s.th}>{col}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {coursSelectionne.inscrits.map((inscrit) => (
+                    <tr key={inscrit.id} style={s.tr}>
+                      <td style={{ ...s.td, fontWeight: "500" }}>{inscrit.nom}</td>
+                      <td style={s.td}>{inscrit.email}</td>
+                      <td style={s.td}>{inscrit.pays || "—"}</td>
+                      <td style={s.td}>
+                        {inscrit.derniere_connexion
+                          ? new Date(inscrit.derniere_connexion * 1000).toLocaleDateString("fr-FR")
+                          : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -97,7 +147,16 @@ const s = {
   cardFooter:     { display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "auto" },
   badgeCategorie: { fontSize: "11px", fontWeight: "600", color: "#042C53", background: "#EEF5F7", padding: "3px 8px", borderRadius: "20px" },
   badgeInvisible: { fontSize: "11px", fontWeight: "600", color: "#92400E", background: "#FEF9EC", padding: "3px 8px", borderRadius: "20px" },
-  lien:           { fontSize: "12px", color: "#0F6E56", fontWeight: "600", textDecoration: "none" },
+  btnInscrits:    { fontSize: "12px", color: "#0F6E56", fontWeight: "600", background: "#ECFDF5", border: "none", padding: "4px 10px", borderRadius: "20px", cursor: "pointer" },
   alertError:     { background: "#FEF2F2", color: "#B91C1C", padding: "10px 14px", borderRadius: "8px", marginBottom: "1rem", fontSize: "13px" },
   btnPrimary:     { padding: "10px 18px", background: "#042C53", color: "#fff", borderRadius: "8px", fontWeight: "600", fontSize: "14px", border: "none", cursor: "pointer" },
+  overlay:        { position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 },
+  modal:          { background: "#fff", borderRadius: "16px", padding: "2rem", width: "100%", maxWidth: "700px", maxHeight: "90vh", overflowY: "auto" },
+  modalHeader:    { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" },
+  modalTitre:     { fontSize: "18px", fontWeight: "700", margin: 0 },
+  btnClose:       { background: "none", border: "none", fontSize: "20px", cursor: "pointer", color: "#888" },
+  table:          { width: "100%", borderCollapse: "collapse" },
+  th:             { textAlign: "left", padding: "10px 12px", fontSize: "12px", fontWeight: "600", color: "#888", borderBottom: "2px solid #f0f0f0", textTransform: "uppercase" },
+  tr:             { borderBottom: "1px solid #f5f5f5" },
+  td:             { padding: "12px", fontSize: "13px", color: "#444", verticalAlign: "middle" },
 };

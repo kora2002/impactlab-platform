@@ -21,4 +21,8 @@ urlpatterns = [
     path('beneficiaires/import-igbs/',  views.ImportIGBSView.as_view(),  name='import_igbs'),
     path('beneficiaires/cours-academy/', views.CoursAcademyView.as_view(), name='cours_academy'),
 
+    path('connecteurs/tester/',   views.ConnecteurTesterView.as_view(),   name='connecteur_tester'),
+    path('connecteurs/importer/', views.ConnecteurImporterView.as_view(), name='connecteur_importer'),
+
+
 ]

@@ -18,19 +18,20 @@ const FORM_VIDE = {
 // ─── Composant principal ───────────────────────────────────────────────────────
 
 export default function Structures() {
-  const [structures, setStructures]   = useState([]);
-  const [chargement, setChargement]   = useState(true);
-  const [filtreType, setFiltreType]   = useState("");
-  const [showModal, setShowModal]     = useState(false);
-  const [form, setForm]               = useState(FORM_VIDE);
-  const [envoi, setEnvoi]             = useState(false);
-  const [erreur, setErreur]           = useState("");
-  const [succes, setSucces]           = useState("");
-  const [showModalMembre, setShowModalMembre]   = useState(false);
+  const [structures, setStructures]               = useState([]);
+  const [chargement, setChargement]               = useState(true);
+  const [filtreType, setFiltreType]               = useState("");
+  const [showModal, setShowModal]                 = useState(false);
+  const [form, setForm]                           = useState(FORM_VIDE);
+  const [envoi, setEnvoi]                         = useState(false);
+  const [erreur, setErreur]                       = useState("");
+  const [succes, setSucces]                       = useState("");
+  const [showModalMembre, setShowModalMembre]     = useState(false);
   const [structureSelectionnee, setStructureSelectionnee] = useState(null);
-  const [beneficiaires, setBeneficiaires]       = useState([]);
-  const [formMembre, setFormMembre]             = useState({ beneficiaire: "", role: "membre" });
-  const [envoiMembre, setEnvoiMembre]           = useState(false);
+  const [beneficiaires, setBeneficiaires]         = useState([]);
+  const [formMembre, setFormMembre]               = useState({ beneficiaire: "", role: "membre" });
+  const [envoiMembre, setEnvoiMembre]             = useState(false);
+  const [importEnCours, setImportEnCours]         = useState(false);
 
   // ── Chargement ──
   const charger = (type = filtreType) => {
@@ -43,7 +44,26 @@ export default function Structures() {
       .finally(() => setChargement(false));
   };
 
-  useEffect(() => { charger(); }, []);
+  // ── Import automatique au chargement ──
+  const importerAutomatique = () => {
+    setImportEnCours(true);
+    Promise.all([
+      api.post("beneficiaires/import-asso-pro/"),
+      api.post("beneficiaires/import-sageo/"),
+    ]).then(([resAssoPro, resSageo]) => {
+      const totalImportes = (resAssoPro.data.importees || 0) + (resSageo.data.importees || 0);
+      if (totalImportes > 0) {
+        setSucces(`${totalImportes} nouvelle(s) structure(s) importée(s) automatiquement.`);
+        charger();
+      }
+    }).catch((err) => console.error("Erreur import automatique", err))
+      .finally(() => setImportEnCours(false));
+  };
+
+  useEffect(() => {
+    charger();
+    importerAutomatique();
+  }, []);
 
   // ── Filtre type ──
   const handleFiltreType = (e) => {
@@ -52,7 +72,7 @@ export default function Structures() {
     charger(val);
   };
 
-  // ── Formulaire ──
+  // ── Formulaire création ──
   const handleFormChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -81,7 +101,7 @@ export default function Structures() {
     }
   };
 
-  // ajouter un membre à une structure
+  // ── Ajout membre ──
   const handleAjouterMembre = async (e) => {
     e.preventDefault();
     setEnvoiMembre(true);
@@ -97,7 +117,7 @@ export default function Structures() {
       setEnvoiMembre(false);
     }
   };
-  
+
   const ouvrirModalMembre = (st) => {
     setStructureSelectionnee(st);
     setFormMembre({ beneficiaire: "", role: "membre" });
@@ -106,7 +126,7 @@ export default function Structures() {
     setShowModalMembre(true);
   };
 
-  // ── Import ASSO-PRO ──
+  // ── Import manuel ASSO-PRO ──
   const handleImportAssoPro = () => {
     if (window.confirm("Importer les organisations depuis ASSO-PRO ?")) {
       api.post("beneficiaires/import-asso-pro/")
@@ -120,32 +140,35 @@ export default function Structures() {
     <div>
 
       {/* ── EN-TÊTE ── */}
-<div style={s.header}>
-  <div>
-    <h1 style={s.titre}>Structures</h1>
-    <p style={s.sousTitre}>Associations, entreprises incubées et établissements scolaires</p>
-  </div>
-  <div style={{ display: "flex", gap: "12px" }}>
-    <button onClick={handleImportAssoPro} style={s.btnAssoPro}>
-      🔗 Import ASSO-PRO
-    </button>
-    <button
-      onClick={() => {
-        if (window.confirm("Importer les porteurs de projets depuis SAGEO/IGBS ?")) {
-          api.post("beneficiaires/import-sageo/")
-            .then((res) => { alert(res.data.message); charger(); })
-            .catch(() => alert("Erreur lors de l'import SAGEO."));
-        }
-      }}
-      style={{ padding: "10px 18px", background: "#7F77DD", color: "#fff", borderRadius: "8px", fontWeight: "600", fontSize: "14px", border: "none", cursor: "pointer" }}
-    >
-      🔗 Import SAGEO
-    </button>
-    <button onClick={() => { setShowModal(true); setErreur(""); setSucces(""); }} style={s.btnPrimary}>
-      + Nouvelle structure
-    </button>
-  </div>
-</div>
+      <div style={s.header}>
+        <div>
+          <h1 style={s.titre}>Structures</h1>
+          <p style={s.sousTitre}>
+            Associations, entreprises incubées et établissements scolaires
+            {importEnCours && <span style={{ marginLeft: "10px", fontSize: "12px", color: "#888" }}>🔄 Synchronisation en cours...</span>}
+          </p>
+        </div>
+        <div style={{ display: "flex", gap: "12px" }}>
+          <button onClick={handleImportAssoPro} style={s.btnAssoPro}>
+            🔗 Import ASSO-PRO
+          </button>
+          <button
+            onClick={() => {
+              if (window.confirm("Importer les entreprises depuis SAGEO ?")) {
+                api.post("beneficiaires/import-sageo/")
+                  .then((res) => { alert(res.data.message); charger(); })
+                  .catch(() => alert("Erreur lors de l'import SAGEO."));
+              }
+            }}
+            style={{ padding: "10px 18px", background: "#7F77DD", color: "#fff", borderRadius: "8px", fontWeight: "600", fontSize: "14px", border: "none", cursor: "pointer" }}
+          >
+            🔗 Import SAGEO
+          </button>
+          <button onClick={() => { setShowModal(true); setErreur(""); setSucces(""); }} style={s.btnPrimary}>
+            + Nouvelle structure
+          </button>
+        </div>
+      </div>
 
       {/* ── MESSAGE SUCCÈS ── */}
       {succes && <div style={s.alertSuccess}>✅ {succes}</div>}
@@ -161,93 +184,91 @@ export default function Structures() {
         </select>
       </div>
 
-   {/* ── TABLEAU ── */}
-<div style={s.card}>
-  <div style={s.cardTitle}>{structures.length} structure(s)</div>
+      {/* ── TABLEAU ── */}
+      <div style={s.card}>
+        <div style={s.cardTitle}>{structures.length} structure(s)</div>
 
-  {chargement ? (
-    <div style={s.center}>Chargement...</div>
-  ) : structures.length === 0 ? (
-    <div style={s.center}>Aucune structure trouvée.</div>
-  ) : (
-    <table style={s.table}>
-      <thead>
-        <tr>
-          {["Nom", "Type", "Source", "Secteur", "Niveau de professionnalisation", "Membres", "Actions"].map((col) => (
-            <th key={col} style={s.th}>{col}</th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {structures.map((st) => (
-          <tr key={st.id} style={s.tr}>
+        {chargement ? (
+          <div style={s.center}>Chargement...</div>
+        ) : structures.length === 0 ? (
+          <div style={s.center}>Aucune structure trouvée.</div>
+        ) : (
+          <table style={s.table}>
+            <thead>
+              <tr>
+                {["Nom", "Type", "Source", "Secteur", "Niveau de professionnalisation", "Membres", "Actions"].map((col) => (
+                  <th key={col} style={s.th}>{col}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {structures.map((st) => (
+                <tr key={st.id} style={s.tr}>
 
-            {/* Nom */}
-            <td style={{ ...s.td, fontWeight: "500" }}>{st.nom}</td>
+                  {/* Nom */}
+                  <td style={{ ...s.td, fontWeight: "500" }}>{st.nom}</td>
 
-            {/* Type */}
-            <td style={s.td}>
-              <span style={{ ...s.badge, ...(TYPE_COLORS[st.type] || {}) }}>
-                {st.type_display}
-              </span>
-            </td>
+                  {/* Type */}
+                  <td style={s.td}>
+                    <span style={{ ...s.badge, ...(TYPE_COLORS[st.type] || {}) }}>
+                      {st.type_display}
+                    </span>
+                  </td>
 
-            {/* Source */}
-            <td style={s.td}>
-              <span style={{
-                padding: "3px 10px", borderRadius: "20px", fontSize: "12px", fontWeight: "600",
-                background: st.source === "asso_pro" ? "#EEF5F7" :
-                            st.source === "sageo"    ? "#F5F3FF" : "#f0f0f0",
-                color: st.source === "asso_pro" ? "#1F4E5F" :
-                       st.source === "sageo"    ? "#5B21B6" : "#555",
-              }}>
-                {st.source_display}
-              </span>
-            </td>
+                  {/* Source */}
+                  <td style={s.td}>
+                    <span style={{
+                      padding: "3px 10px", borderRadius: "20px", fontSize: "12px", fontWeight: "600",
+                      background: st.source === "asso_pro" ? "#EEF5F7" :
+                                  st.source === "sageo"    ? "#F5F3FF" : "#f0f0f0",
+                      color: st.source === "asso_pro" ? "#1F4E5F" :
+                             st.source === "sageo"    ? "#5B21B6" : "#555",
+                    }}>
+                      {st.source_display}
+                    </span>
+                  </td>
 
-            {/* Secteur */}
-            <td style={s.td}>{st.secteur || "—"}</td>
+                  {/* Secteur */}
+                  <td style={s.td}>{st.secteur || "—"}</td>
 
-            {/* Niveau de professionnalisation */}
-            <td style={s.td}>
-              {st.niveau_professionnalisation ? (
-                <span style={{
-                  padding: "3px 10px",
-                  borderRadius: "20px",
-                  fontSize: "12px",
-                  fontWeight: "600",
-                  background: st.niveau_professionnalisation.includes("Élevé") ? "#ECFDF5" :
-                              st.niveau_professionnalisation.includes("Moyen") ? "#FEF9EC" : "#FEF2F2",
-                  color: st.niveau_professionnalisation.includes("Élevé") ? "#065F46" :
-                         st.niveau_professionnalisation.includes("Moyen") ? "#92400E" : "#B91C1C",
-                }}>
-                  {st.niveau_professionnalisation}
-                </span>
-              ) : "—"}
-            </td>
+                  {/* Niveau de professionnalisation */}
+                  <td style={s.td}>
+                    {st.niveau_professionnalisation ? (
+                      <span style={{
+                        padding: "3px 10px", borderRadius: "20px", fontSize: "12px", fontWeight: "600",
+                        background: st.niveau_professionnalisation.includes("Élevé") ? "#ECFDF5" :
+                                    st.niveau_professionnalisation.includes("Moyen") ? "#FEF9EC" : "#FEF2F2",
+                        color: st.niveau_professionnalisation.includes("Élevé") ? "#065F46" :
+                               st.niveau_professionnalisation.includes("Moyen") ? "#92400E" : "#B91C1C",
+                      }}>
+                        {st.niveau_professionnalisation}
+                      </span>
+                    ) : "—"}
+                  </td>
 
-            {/* Membres */}
-            <td style={s.td}>
-              <span style={s.badgeGris}>{st.nombre_membres} membre(s)</span>
-            </td>
+                  {/* Membres */}
+                  <td style={s.td}>
+                    <span style={s.badgeGris}>{st.nombre_membres} membre(s)</span>
+                  </td>
 
-            {/* Actions */}
-            <td style={s.td}>
-              <div style={s.actionsCell}>
-                <button onClick={() => ouvrirModalMembre(st)} style={s.btnVoir}>
-                  + Membre
-                </button>
-                <button onClick={() => handleSupprimer(st)} style={s.btnSupprimer}>
-                  Supprimer
-                </button>
-              </div>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  )}
-</div>
+                  {/* Actions */}
+                  <td style={s.td}>
+                    <div style={s.actionsCell}>
+                      <button onClick={() => ouvrirModalMembre(st)} style={s.btnVoir}>
+                        + Membre
+                      </button>
+                      <button onClick={() => handleSupprimer(st)} style={s.btnSupprimer}>
+                        Supprimer
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
       {/* ── MODAL CRÉATION ── */}
       {showModal && (
         <div style={s.overlay}>
@@ -262,7 +283,6 @@ export default function Structures() {
             <form onSubmit={handleSubmit}>
               <div style={s.formGrid}>
                 <Field label="Nom *" name="nom" value={form.nom} onChange={handleFormChange} required />
-
                 <div>
                   <label style={s.label}>Type *</label>
                   <select name="type" value={form.type} onChange={handleFormChange} required style={s.input}>
@@ -272,12 +292,10 @@ export default function Structures() {
                     <option value="etablissement">Établissement scolaire</option>
                   </select>
                 </div>
-
                 <Field label="Secteur"         name="secteur"       value={form.secteur}       onChange={handleFormChange} />
                 <Field label="Contact (nom)"   name="contact_nom"   value={form.contact_nom}   onChange={handleFormChange} />
                 <Field label="Contact (email)" name="contact_email" type="email" value={form.contact_email} onChange={handleFormChange} />
                 <Field label="Contact (tél)"   name="contact_tel"   value={form.contact_tel}   onChange={handleFormChange} />
-
                 <div style={{ gridColumn: "1 / -1" }}>
                   <label style={s.label}>Description</label>
                   <textarea
@@ -292,9 +310,7 @@ export default function Structures() {
               </div>
 
               <div style={s.modalFooter}>
-                <button type="button" onClick={() => setShowModal(false)} style={s.btnSecondary}>
-                  Annuler
-                </button>
+                <button type="button" onClick={() => setShowModal(false)} style={s.btnSecondary}>Annuler</button>
                 <button type="submit" disabled={envoi} style={{ ...s.btnPrimary, opacity: envoi ? 0.7 : 1 }}>
                   {envoi ? "Enregistrement..." : "Enregistrer"}
                 </button>
@@ -317,7 +333,6 @@ export default function Structures() {
 
             <form onSubmit={handleAjouterMembre}>
               <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-
                 <div>
                   <label style={s.label}>Bénéficiaire *</label>
                   <select
@@ -332,7 +347,6 @@ export default function Structures() {
                     ))}
                   </select>
                 </div>
-
                 <div>
                   <label style={s.label}>Rôle *</label>
                   <select
@@ -350,9 +364,7 @@ export default function Structures() {
               </div>
 
               <div style={s.modalFooter}>
-                <button type="button" onClick={() => setShowModalMembre(false)} style={s.btnSecondary}>
-                  Annuler
-                </button>
+                <button type="button" onClick={() => setShowModalMembre(false)} style={s.btnSecondary}>Annuler</button>
                 <button type="submit" disabled={envoiMembre} style={{ ...s.btnPrimary, opacity: envoiMembre ? 0.7 : 1 }}>
                   {envoiMembre ? "Ajout..." : "Ajouter"}
                 </button>
@@ -365,6 +377,7 @@ export default function Structures() {
     </div>
   );
 }
+
 // ─── Sous-composant Field ──────────────────────────────────────────────────────
 
 function Field({ label, name, type = "text", value, onChange, required = false }) {
@@ -392,9 +405,11 @@ const s = {
   badge:        { padding: "3px 10px", borderRadius: "20px", fontSize: "12px", fontWeight: "600" },
   badgeGris:    { padding: "3px 10px", borderRadius: "20px", fontSize: "12px", background: "#f0f0f0", color: "#555" },
   select:       { padding: "10px 14px", borderRadius: "8px", border: "1.5px solid #e0e0e0", fontSize: "14px", background: "#fafafa" },
-  btnPrimary:   { padding: "10px 18px", background: "#1F4E5F", color: "#fff", borderRadius: "8px", fontWeight: "600", fontSize: "14px", border: "none", cursor: "pointer" },
+  actionsCell:  { display: "flex", gap: "8px" },
+  btnPrimary:   { padding: "10px 18px", background: "#042C53", color: "#fff", borderRadius: "8px", fontWeight: "600", fontSize: "14px", border: "none", cursor: "pointer" },
   btnSecondary: { padding: "10px 18px", background: "#f0f0f0", color: "#333", borderRadius: "8px", fontWeight: "600", fontSize: "14px", border: "none", cursor: "pointer" },
   btnAssoPro:   { padding: "10px 18px", background: "#0F6E56", color: "#fff", borderRadius: "8px", fontWeight: "600", fontSize: "14px", border: "none", cursor: "pointer" },
+  btnVoir:      { padding: "6px 12px", background: "#f0f0f0", color: "#333", borderRadius: "8px", fontSize: "12px", border: "none", cursor: "pointer" },
   btnSupprimer: { padding: "6px 12px", background: "#FEF2F2", color: "#B91C1C", borderRadius: "8px", fontSize: "12px", border: "none", cursor: "pointer" },
   btnClose:     { background: "none", border: "none", fontSize: "20px", cursor: "pointer", color: "#888" },
   alertSuccess: { background: "#ECFDF5", color: "#065F46", padding: "10px 14px", borderRadius: "8px", marginBottom: "1rem", fontSize: "13px" },

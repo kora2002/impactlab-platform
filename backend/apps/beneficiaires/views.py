@@ -231,3 +231,102 @@ class CoursAcademyView(APIView):
     def get(self, request):
         resultat = get_cours_moodle()
         return Response(resultat)
+    
+class ConnecteurTesterView(APIView):
+    """POST /api/connecteurs/tester/"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        import requests as req
+        url       = request.data.get("url", "")
+        auth_type = request.data.get("auth_type", "none")
+        token     = request.data.get("token", "")
+        username  = request.data.get("username", "")
+        password  = request.data.get("password", "")
+
+        headers = {}
+        if auth_type == "bearer":
+            headers["Authorization"] = f"Bearer {token}"
+        elif auth_type == "apikey":
+            headers["X-API-Key"] = token
+
+        try:
+            if auth_type == "basic":
+                response = req.get(url, auth=(username, password), timeout=10)
+            else:
+                response = req.get(url, headers=headers, timeout=10)
+
+            if response.status_code != 200:
+                return Response({"erreur": f"Erreur {response.status_code}"})
+
+            data = response.json()
+            if isinstance(data, dict):
+                for v in data.values():
+                    if isinstance(v, list) and len(v) > 0:
+                        data = v
+                        break
+                else:
+                    data = [data]
+
+            return Response({"donnees": data, "total": len(data)})
+
+        except Exception as e:
+            return Response({"erreur": str(e)})
+
+
+class ConnecteurImporterView(APIView):
+    """POST /api/connecteurs/importer/"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        donnees     = request.data.get("donnees", [])
+        mapping     = request.data.get("mapping", {})
+        destination = request.data.get("destination", "beneficiaires")
+
+        importes = 0
+        erreurs  = []
+
+        for item in donnees:
+            try:
+                mapped = {k: item.get(v, "") for k, v in mapping.items() if v}
+
+                if destination == "beneficiaires":
+                    nom    = mapped.get("nom", "")
+                    prenom = mapped.get("prenom", "")
+                    if not nom:
+                        continue
+                    if not Beneficiaire.objects.filter(nom=nom, prenom=prenom).exists():
+                        Beneficiaire.objects.create(
+                            nom=nom,
+                            prenom=prenom or "—",
+                            genre=mapped.get("genre", "homme"),
+                            email=mapped.get("email", ""),
+                            telephone=mapped.get("telephone", "") or "N/A",
+                            localite=mapped.get("localite", ""),
+                        )
+                        importes += 1
+
+                elif destination == "structures":
+                    nom = mapped.get("nom", "")
+                    if not nom:
+                        continue
+                    if not Structure.objects.filter(nom=nom).exists():
+                        Structure.objects.create(
+                            nom=nom,
+                            type=mapped.get("type", "association"),
+                            secteur=mapped.get("secteur", ""),
+                            contact_email=mapped.get("contact_email", ""),
+                            contact_tel=mapped.get("contact_tel", ""),
+                            contact_nom=mapped.get("contact_nom", ""),
+                            source="manuel",
+                        )
+                        importes += 1
+
+            except Exception as e:
+                erreurs.append(str(e))
+
+        return Response({
+            "importes": importes,
+            "erreurs":  erreurs,
+            "message":  f"{importes} enregistrement(s) importé(s) dans {destination}."
+        })

@@ -32,6 +32,7 @@ urlpatterns = [
 
     # API Documents
     path('api/documents/', include('apps.documents.urls')),
+    
 
     # API Dashboard
     path('api/dashboard/', include('apps.dashboard.urls')),

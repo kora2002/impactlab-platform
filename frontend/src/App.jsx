@@ -14,6 +14,7 @@ import Documents from "./pages/documents/Documents";
 import Suivi from "./pages/suivi/Suivi";
 import Structures from "./pages/structures/Structures";
 import Academy from "./pages/academy/Academy";
+import Connecteurs from "./pages/connecteurs/Connecteurs";
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem("access");
@@ -45,6 +46,7 @@ export default function App() {
         <Route path="suivi" element={<Suivi />} />
         <Route path="structures" element={<Structures />} />
         <Route path="academy" element={<Academy />} />
+        <Route path="connecteurs" element={<Connecteurs />} />
         
       </Route>
     </Routes>

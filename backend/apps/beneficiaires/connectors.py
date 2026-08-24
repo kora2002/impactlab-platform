@@ -260,9 +260,10 @@ def importer_porteurs_igbs():
 
 def get_cours_moodle():
     """
-    Récupère la liste des cours depuis Impact'Lab Academy (Moodle)
+    Récupère la liste des cours et les inscrits depuis Impact'Lab Academy (Moodle)
     """
     try:
+        # ── 1. Récupérer les cours ──
         response = requests.get(
             MOODLE_BASE_URL,
             params={
@@ -275,25 +276,55 @@ def get_cours_moodle():
         if response.status_code != 200:
             return {"erreur": f"Erreur API Moodle : {response.status_code}", "cours": []}
 
-        cours = response.json()
+        tous_cours = [c for c in response.json() if c.get("id") != 1]
+        cours_data = []
 
-        # Filtrer le cours "site" (id=1) qui est le site lui-même
-        cours_filtres = [
-            {
-                "id":          c.get("id"),
-                "nom":         c.get("fullname", ""),
-                "code":        c.get("shortname", ""),
-                "categorie_id": c.get("categoryid"),
-                "visible":     c.get("visible", 1),
-                "resume":      c.get("summary", ""),
-            }
-            for c in cours if c.get("id") != 1
-        ]
+        # ── 2. Pour chaque cours, récupérer les inscrits ──
+        for cours in tous_cours:
+            cours_id = cours.get("id")
+
+            inscrits_response = requests.get(
+                MOODLE_BASE_URL,
+                params={
+                    "wstoken":            MOODLE_TOKEN,
+                    "wsfunction":         "core_enrol_get_enrolled_users",
+                    "moodlewsrestformat": "json",
+                    "courseid":           cours_id,
+                },
+                timeout=10
+            )
+
+            inscrits = []
+            if inscrits_response.status_code == 200:
+                inscrits = [
+                    u for u in inscrits_response.json()
+                    if any(r.get("shortname") == "student" for r in u.get("roles", []))
+                ]
+
+            cours_data.append({
+                "id":           cours_id,
+                "nom":          cours.get("fullname", ""),
+                "code":         cours.get("shortname", ""),
+                "categorie_id": cours.get("categoryid"),
+                "visible":      cours.get("visible", 1),
+                "resume":       cours.get("summary", ""),
+                "nb_inscrits":  len(inscrits),
+                "inscrits":     [
+                    {
+                        "id":       u.get("id"),
+                        "nom":      u.get("fullname", ""),
+                        "email":    u.get("email", ""),
+                        "pays":     u.get("country", ""),
+                        "derniere_connexion": u.get("lastcourseaccess", 0),
+                    }
+                    for u in inscrits
+                ],
+            })
 
         return {
-            "total":  len(cours_filtres),
-            "cours":  cours_filtres,
-            "message": f"{len(cours_filtres)} cours récupéré(s) depuis Impact'Lab Academy."
+            "total":   len(cours_data),
+            "cours":   cours_data,
+            "message": f"{len(cours_data)} cours récupéré(s) depuis Impact'Lab Academy."
         }
 
     except requests.exceptions.ConnectionError:
