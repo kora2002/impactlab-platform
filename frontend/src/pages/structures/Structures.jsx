@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import api from "../../services/api";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
@@ -9,21 +9,12 @@ const TYPE_COLORS = {
   etablissement: { background: "#F5F3FF", color: "#5B21B6" },
 };
 
-const FORM_VIDE = {
-  nom: "", type: "", secteur: "",
-  description: "", contact_nom: "",
-  contact_email: "", contact_tel: "",
-};
-
 // ─── Composant principal ───────────────────────────────────────────────────────
 
 export default function Structures() {
   const [structures, setStructures]               = useState([]);
   const [chargement, setChargement]               = useState(true);
   const [filtreType, setFiltreType]               = useState("");
-  const [showModal, setShowModal]                 = useState(false);
-  const [form, setForm]                           = useState(FORM_VIDE);
-  const [envoi, setEnvoi]                         = useState(false);
   const [erreur, setErreur]                       = useState("");
   const [succes, setSucces]                       = useState("");
   const [showModalMembre, setShowModalMembre]     = useState(false);
@@ -32,8 +23,31 @@ export default function Structures() {
   const [formMembre, setFormMembre]               = useState({ beneficiaire: "", role: "membre" });
   const [envoiMembre, setEnvoiMembre]             = useState(false);
   const [importEnCours, setImportEnCours]         = useState(false);
+  const [showImportMenu, setShowImportMenu]       = useState(false);
+  const [showExportMenu, setShowExportMenu]       = useState(false);
+  const [programmes, setProgrammes]               = useState([]);
 
-  // ── Chargement ──
+  const importRef = useRef(null);
+  const exportRef = useRef(null);
+
+  // ── Fermer les menus si on clique ailleurs ──
+  useEffect(() => {
+    const handler = (e) => {
+      if (importRef.current && !importRef.current.contains(e.target)) setShowImportMenu(false);
+      if (exportRef.current && !exportRef.current.contains(e.target)) setShowExportMenu(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // ── Chargement initial ──
+  useEffect(() => {
+    charger();
+    importerAutomatique();
+    api.get("programmes/").then((res) => setProgrammes(res.data));
+  }, []);
+
+  // ── Chargement structures ──
   const charger = (type = filtreType) => {
     setChargement(true);
     const params = new URLSearchParams();
@@ -60,11 +74,6 @@ export default function Structures() {
       .finally(() => setImportEnCours(false));
   };
 
-  useEffect(() => {
-    charger();
-    importerAutomatique();
-  }, []);
-
   // ── Filtre type ──
   const handleFiltreType = (e) => {
     const val = e.target.value;
@@ -72,26 +81,55 @@ export default function Structures() {
     charger(val);
   };
 
-  // ── Formulaire création ──
-  const handleFormChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  // ── Imports manuels ──
+  const handleImportAssoPro = () => {
+    setShowImportMenu(false);
+    if (window.confirm("Importer les organisations depuis ASSO-PRO ?")) {
+      api.post("beneficiaires/import-asso-pro/")
+        .then((res) => { setSucces(res.data.message); charger(); })
+        .catch(() => setErreur("Erreur lors de l'import ASSO-PRO."));
+    }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setEnvoi(true);
-    setErreur("");
-    try {
-      await api.post("structures/", form);
-      setSucces("Structure créée avec succès.");
-      setShowModal(false);
-      setForm(FORM_VIDE);
-      charger();
-    } catch {
-      setErreur("Erreur lors de la création.");
-    } finally {
-      setEnvoi(false);
+  const handleImportSageo = () => {
+    setShowImportMenu(false);
+    if (window.confirm("Importer les entreprises depuis SAGEO ?")) {
+      api.post("beneficiaires/import-sageo/")
+        .then((res) => { setSucces(res.data.message); charger(); })
+        .catch(() => setErreur("Erreur lors de l'import SAGEO."));
     }
+  };
+
+  // ── Exports ──
+  const handleExportExcel = () => {
+    setShowExportMenu(false);
+    api.get("dashboard/export-excel/", { responseType: "blob" })
+      .then((res) => {
+        const url = window.URL.createObjectURL(new Blob([res.data]));
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "structures_impactlab.xlsx";
+        a.click();
+      })
+      .catch(() => setErreur("Erreur lors de l'export Excel."));
+  };
+
+  const handleExportPDF = () => {
+    setShowExportMenu(false);
+    window.print();
+  };
+
+  const handleExportParProgramme = (prog) => {
+    setShowExportMenu(false);
+    api.get(`dashboard/export-excel/?programme_id=${prog.id}`, { responseType: "blob" })
+      .then((res) => {
+        const url = window.URL.createObjectURL(new Blob([res.data]));
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `structures_${prog.nom}.xlsx`;
+        a.click();
+      })
+      .catch(() => setErreur("Erreur lors de l'export."));
   };
 
   // ── Suppression ──
@@ -126,15 +164,6 @@ export default function Structures() {
     setShowModalMembre(true);
   };
 
-  // ── Import manuel ASSO-PRO ──
-  const handleImportAssoPro = () => {
-    if (window.confirm("Importer les organisations depuis ASSO-PRO ?")) {
-      api.post("beneficiaires/import-asso-pro/")
-        .then((res) => { alert(res.data.message); charger(); })
-        .catch(() => alert("Erreur lors de l'import ASSO-PRO."));
-    }
-  };
-
   // ── Rendu ──
   return (
     <div>
@@ -149,29 +178,70 @@ export default function Structures() {
           </p>
         </div>
         <div style={{ display: "flex", gap: "12px" }}>
-          <button onClick={handleImportAssoPro} style={s.btnAssoPro}>
-            🔗 Import ASSO-PRO
-          </button>
-          <button
-            onClick={() => {
-              if (window.confirm("Importer les entreprises depuis SAGEO ?")) {
-                api.post("beneficiaires/import-sageo/")
-                  .then((res) => { alert(res.data.message); charger(); })
-                  .catch(() => alert("Erreur lors de l'import SAGEO."));
-              }
-            }}
-            style={{ padding: "10px 18px", background: "#7F77DD", color: "#fff", borderRadius: "8px", fontWeight: "600", fontSize: "14px", border: "none", cursor: "pointer" }}
-          >
-            🔗 Import SAGEO
-          </button>
-          <button onClick={() => { setShowModal(true); setErreur(""); setSucces(""); }} style={s.btnPrimary}>
-            + Nouvelle structure
-          </button>
+
+          {/* ── Bouton Import ── */}
+          <div ref={importRef} style={{ position: "relative" }}>
+            <button
+              onClick={() => { setShowImportMenu(!showImportMenu); setShowExportMenu(false); }}
+              style={s.btnAssoPro}
+            >
+              🔗 Importer ▾
+            </button>
+            {showImportMenu && (
+              <div style={s.dropdown}>
+                <button onClick={handleImportAssoPro} style={s.dropdownItem}>
+                  🏢 Depuis ASSO-PRO
+                </button>
+                <button onClick={handleImportSageo} style={s.dropdownItem}>
+                  🏭 Depuis SAGEO
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* ── Bouton Export ── */}
+          <div ref={exportRef} style={{ position: "relative" }}>
+            <button
+              onClick={() => { setShowExportMenu(!showExportMenu); setShowImportMenu(false); }}
+              style={s.btnPrimary}
+            >
+              📤 Exporter ▾
+            </button>
+            {showExportMenu && (
+              <div style={{ ...s.dropdown, maxHeight: "300px", overflowY: "auto" }}>
+                <button onClick={handleExportExcel} style={s.dropdownItem}>
+                  📊 Toutes les structures (Excel)
+                </button>
+                <button onClick={handleExportPDF} style={s.dropdownItem}>
+                  📄 Toutes les structures (PDF)
+                </button>
+                {programmes.length > 0 && (
+                  <>
+                    <div style={{ borderTop: "1px solid #f0f0f0", margin: "4px 0" }} />
+                    <div style={{ padding: "8px 16px", fontSize: "11px", color: "#aaa", fontWeight: "600", textTransform: "uppercase" }}>
+                      Par programme
+                    </div>
+                    {programmes.map((prog) => (
+                      <button
+                        key={prog.id}
+                        onClick={() => handleExportParProgramme(prog)}
+                        style={s.dropdownItem}
+                      >
+                        📋 {prog.nom}
+                      </button>
+                    ))}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
         </div>
       </div>
 
-      {/* ── MESSAGE SUCCÈS ── */}
+      {/* ── MESSAGES ── */}
       {succes && <div style={s.alertSuccess}>✅ {succes}</div>}
+      {erreur && <div style={s.alertError}>❌ {erreur}</div>}
 
       {/* ── FILTRES ── */}
       <div style={{ ...s.card, marginBottom: "1rem", display: "flex", gap: "12px", alignItems: "center" }}>
@@ -269,57 +339,6 @@ export default function Structures() {
         )}
       </div>
 
-      {/* ── MODAL CRÉATION ── */}
-      {showModal && (
-        <div style={s.overlay}>
-          <div style={s.modal}>
-            <div style={s.modalHeader}>
-              <h2 style={s.modalTitre}>Nouvelle structure</h2>
-              <button onClick={() => setShowModal(false)} style={s.btnClose}>✕</button>
-            </div>
-
-            {erreur && <div style={s.alertError}>{erreur}</div>}
-
-            <form onSubmit={handleSubmit}>
-              <div style={s.formGrid}>
-                <Field label="Nom *" name="nom" value={form.nom} onChange={handleFormChange} required />
-                <div>
-                  <label style={s.label}>Type *</label>
-                  <select name="type" value={form.type} onChange={handleFormChange} required style={s.input}>
-                    <option value="">Sélectionner</option>
-                    <option value="association">Association</option>
-                    <option value="entreprise">Entreprise incubée</option>
-                    <option value="etablissement">Établissement scolaire</option>
-                  </select>
-                </div>
-                <Field label="Secteur"         name="secteur"       value={form.secteur}       onChange={handleFormChange} />
-                <Field label="Contact (nom)"   name="contact_nom"   value={form.contact_nom}   onChange={handleFormChange} />
-                <Field label="Contact (email)" name="contact_email" type="email" value={form.contact_email} onChange={handleFormChange} />
-                <Field label="Contact (tél)"   name="contact_tel"   value={form.contact_tel}   onChange={handleFormChange} />
-                <div style={{ gridColumn: "1 / -1" }}>
-                  <label style={s.label}>Description</label>
-                  <textarea
-                    name="description"
-                    value={form.description}
-                    onChange={handleFormChange}
-                    rows={3}
-                    style={{ ...s.input, resize: "vertical" }}
-                    placeholder="Description de la structure..."
-                  />
-                </div>
-              </div>
-
-              <div style={s.modalFooter}>
-                <button type="button" onClick={() => setShowModal(false)} style={s.btnSecondary}>Annuler</button>
-                <button type="submit" disabled={envoi} style={{ ...s.btnPrimary, opacity: envoi ? 0.7 : 1 }}>
-                  {envoi ? "Enregistrement..." : "Enregistrer"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
       {/* ── MODAL AJOUT MEMBRE ── */}
       {showModalMembre && (
         <div style={s.overlay}>
@@ -378,17 +397,6 @@ export default function Structures() {
   );
 }
 
-// ─── Sous-composant Field ──────────────────────────────────────────────────────
-
-function Field({ label, name, type = "text", value, onChange, required = false }) {
-  return (
-    <div>
-      <label style={s.label}>{label}</label>
-      <input type={type} name={name} value={value} onChange={onChange} required={required} style={s.input} />
-    </div>
-  );
-}
-
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = {
@@ -419,7 +427,8 @@ const s = {
   modalHeader:  { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" },
   modalTitre:   { fontSize: "18px", fontWeight: "700" },
   modalFooter:  { display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "1.5rem" },
-  formGrid:     { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" },
   label:        { display: "block", fontSize: "13px", fontWeight: "500", color: "#444", marginBottom: "6px" },
   input:        { width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1.5px solid #e0e0e0", fontSize: "14px", background: "#fafafa" },
+  dropdown:     { position: "absolute", top: "100%", right: 0, marginTop: "4px", background: "#fff", borderRadius: "10px", boxShadow: "0 8px 24px rgba(0,0,0,0.12)", border: "1px solid #f0f0f0", zIndex: 100, minWidth: "220px", overflow: "hidden" },
+  dropdownItem: { display: "block", width: "100%", padding: "12px 16px", background: "none", border: "none", textAlign: "left", fontSize: "13px", cursor: "pointer", color: "#333", fontWeight: "500" },
 };
