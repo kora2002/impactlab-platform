@@ -11,4 +11,5 @@ urlpatterns = [
 
     # Cohortes d'un programme
     path('<int:programme_id>/cohortes/', views.CohorteListCreateView.as_view(), name='cohortes_programme'),
+    
 ]

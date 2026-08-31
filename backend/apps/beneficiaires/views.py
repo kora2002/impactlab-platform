@@ -330,3 +330,43 @@ class ConnecteurImporterView(APIView):
             "erreurs":  erreurs,
             "message":  f"{importes} enregistrement(s) importé(s) dans {destination}."
         })
+    
+
+class SageoCohorteView(APIView):
+    """GET /api/sageo/cohortes/"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        from .connectors import get_cookies_sageo
+        import requests as req
+        cookies = get_cookies_sageo()
+        if not cookies:
+            return Response({"erreur": "Impossible de s'authentifier à SAGEO."})
+        try:
+            response = req.get(
+                "https://api-sageo.impactlab-cilis.org/api/v1/staff/cohortes",
+                cookies=cookies, timeout=10
+            )
+            return Response(response.json())
+        except Exception as e:
+            return Response({"erreur": str(e)})
+
+
+class SageoReportingView(APIView):
+    """GET /api/sageo/reporting/"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        from .connectors import get_cookies_sageo
+        import requests as req
+        cookies = get_cookies_sageo()
+        if not cookies:
+            return Response({"erreur": "Impossible de s'authentifier à SAGEO."})
+        try:
+            response = req.get(
+                "https://api-sageo.impactlab-cilis.org/api/v1/staff/reporting",
+                cookies=cookies, timeout=10
+            )
+            return Response(response.json())
+        except Exception as e:
+            return Response({"erreur": str(e)})

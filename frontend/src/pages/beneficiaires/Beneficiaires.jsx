@@ -2,11 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
 
-// ─── Constantes ───────────────────────────────────────────────────────────────
-
 const PAR_PAGE = 15;
-
-// ─── Composant principal ───────────────────────────────────────────────────────
 
 export default function Beneficiaires() {
   const navigate = useNavigate();
@@ -21,13 +17,16 @@ export default function Beneficiaires() {
   const [resultImport, setResultImport]       = useState(null);
   const [envoiImport, setEnvoiImport]         = useState(false);
   const [showImportMenu, setShowImportMenu]   = useState(false);
+  const [showExportMenu, setShowExportMenu]   = useState(false);
 
   const importRef = useRef(null);
+  const exportRef = useRef(null);
 
-  // ── Fermer le menu si on clique ailleurs ──
+  // ── Fermer les menus si on clique ailleurs ──
   useEffect(() => {
     const handler = (e) => {
       if (importRef.current && !importRef.current.contains(e.target)) setShowImportMenu(false);
+      if (exportRef.current && !exportRef.current.contains(e.target)) setShowExportMenu(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -131,6 +130,49 @@ export default function Beneficiaires() {
     }
   };
 
+  // ── Exports ──
+  const handleExportExcel = () => {
+    setShowExportMenu(false);
+    api.get("dashboard/export-excel/", { responseType: "blob" })
+      .then((res) => {
+        const url = window.URL.createObjectURL(new Blob([res.data]));
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "beneficiaires_impactlab.xlsx";
+        a.click();
+      })
+      .catch(() => alert("Erreur lors de l'export Excel."));
+  };
+
+  const handleExportPDF = () => {
+    setShowExportMenu(false);
+    window.print();
+  };
+
+  const exporterParProgramme = (programme) => {
+    setShowExportMenu(false);
+    const filtres = programme === "igbs"
+      ? beneficiaires.filter(b => b.statut_pro === "entrepreneur")
+      : beneficiaires.filter(b => b.nombre_programmes > 0);
+
+    if (filtres.length === 0) {
+      alert("Aucun bénéficiaire pour ce programme.");
+      return;
+    }
+    const headers = ["Nom complet", "Genre", "Téléphone", "Localité", "Statut pro", "Programmes"];
+    const rows = filtres.map(b => [
+      b.nom_complet, b.genre_display, b.telephone,
+      b.localite || "", b.statut_pro || "", b.nombre_programmes,
+    ]);
+    const csv = [headers, ...rows].map(r => r.join(";")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `beneficiaires_${programme}.csv`;
+    a.click();
+  };
+
   // ── Pagination ──
   const totalPages = Math.ceil(beneficiaires.length / PAR_PAGE) || 1;
   const beneficiairesPagines = beneficiaires.slice((page - 1) * PAR_PAGE, page * PAR_PAGE);
@@ -144,6 +186,37 @@ export default function Beneficiaires() {
         <div>
           <h1 style={s.titre}>Bénéficiaires</h1>
           <p style={s.sousTitre}>Gestion des fiches bénéficiaires</p>
+        </div>
+        <div style={{ display: "flex", gap: "12px" }}>
+
+          {/* Import Excel */}
+          <button
+            onClick={() => { setShowModalImport(true); setResultImport(null); }}
+            style={s.btnSecondary}
+          >
+            📥 Import Excel
+          </button>
+
+          {/* Import dropdown */}
+          <div ref={importRef} style={{ position: "relative" }}>
+            <button
+              onClick={() => { setShowImportMenu(!showImportMenu); setShowExportMenu(false); }}
+              style={s.btnAssoPro}
+            >
+              🔗 Importer ▾
+            </button>
+            {showImportMenu && (
+              <div style={{ ...s.dropdown, top: "100%", bottom: "auto", marginTop: "4px", marginBottom: 0 }}>
+                <button onClick={handleImportAssoPro} style={s.dropdownItem}>
+                  🏢 Depuis ASSO-PRO
+                </button>
+                <button onClick={handleImportIGBS} style={s.dropdownItem}>
+                  👤 Depuis IGBS
+                </button>
+              </div>
+            )}
+          </div>
+
         </div>
       </div>
 
@@ -171,9 +244,7 @@ export default function Beneficiaires() {
       <div style={{ ...s.card, marginTop: "1rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
           <div style={s.cardTitle}>{beneficiaires.length} bénéficiaire(s)</div>
-          <div style={{ fontSize: "13px", color: "#888" }}>
-            Page {page} / {totalPages}
-          </div>
+          <div style={{ fontSize: "13px", color: "#888" }}>Page {page} / {totalPages}</div>
         </div>
 
         {chargement ? (
@@ -270,28 +341,32 @@ export default function Beneficiaires() {
           </>
         )}
 
-        {/* ── BOUTONS EN BAS ── */}
-        <div style={{ display: "flex", gap: "12px", marginTop: "1.5rem", justifyContent: "flex-end" }}>
-          <button
-            onClick={() => { setShowModalImport(true); setResultImport(null); }}
-            style={s.btnSecondary}
-          >
-            📥 Import Excel
-          </button>
-          <div ref={importRef} style={{ position: "relative" }}>
+        {/* ── BOUTON EXPORT EN BAS ── */}
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "1.5rem" }}>
+          <div ref={exportRef} style={{ position: "relative" }}>
             <button
-              onClick={() => setShowImportMenu(!showImportMenu)}
-              style={s.btnAssoPro}
+              onClick={() => { setShowExportMenu(!showExportMenu); setShowImportMenu(false); }}
+              style={s.btnPrimary}
             >
-              🔗 Importer ▾
+              📤 Exporter ▾
             </button>
-            {showImportMenu && (
+            {showExportMenu && (
               <div style={s.dropdown}>
-                <button onClick={handleImportAssoPro} style={s.dropdownItem}>
-                  🏢 Depuis ASSO-PRO
+                <button onClick={handleExportExcel} style={s.dropdownItem}>
+                  📊 Tous les bénéficiaires (Excel)
                 </button>
-                <button onClick={handleImportIGBS} style={s.dropdownItem}>
-                  👤 Depuis IGBS
+                <button onClick={handleExportPDF} style={s.dropdownItem}>
+                  📄 Tous les bénéficiaires (PDF)
+                </button>
+                <div style={{ borderTop: "1px solid #f0f0f0", margin: "4px 0" }} />
+                <div style={{ padding: "8px 16px", fontSize: "11px", color: "#aaa", fontWeight: "600", textTransform: "uppercase" }}>
+                  Par programme
+                </div>
+                <button onClick={() => exporterParProgramme("igbs")} style={s.dropdownItem}>
+                  🌱 Porteurs IGBS
+                </button>
+                <button onClick={() => exporterParProgramme("asso_pro")} style={s.dropdownItem}>
+                  🏢 Bénéficiaires ASSO-PRO
                 </button>
               </div>
             )}
@@ -369,6 +444,7 @@ const s = {
   filtresRow:   { display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" },
   searchInput:  { flex: 1, padding: "8px 12px", borderRadius: "8px", border: "1.5px solid #e0e0e0", fontSize: "13px", background: "#fafafa", minWidth: "200px" },
   select:       { padding: "8px 12px", borderRadius: "8px", border: "1.5px solid #e0e0e0", fontSize: "13px", background: "#fafafa" },
+  table:        { width: "100%", borderCollapse: "collapse" },
   th:           { textAlign: "left", padding: "8px 10px", fontSize: "11px", fontWeight: "600", color: "#888", borderBottom: "2px solid #f0f0f0", textTransform: "uppercase" },
   tr:           { borderBottom: "1px solid #f5f5f5" },
   td:           { padding: "8px 10px", fontSize: "12px", color: "#444", verticalAlign: "middle" },
@@ -376,10 +452,11 @@ const s = {
   avatar:       { width: "28px", height: "28px", borderRadius: "50%", background: "#042C53", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "600", fontSize: "12px", flexShrink: 0 },
   badge:        { padding: "2px 8px", borderRadius: "20px", fontSize: "11px", fontWeight: "600" },
   badgeGris:    { padding: "2px 8px", borderRadius: "20px", fontSize: "11px", background: "#f0f0f0", color: "#555" },
+  actionsCell:  { display: "flex", gap: "6px", flexDirection: "row" },
   btnPrimary:   { padding: "8px 14px", background: "#042C53", color: "#fff", borderRadius: "8px", fontWeight: "600", fontSize: "13px", border: "none", cursor: "pointer" },
   btnSecondary: { padding: "8px 14px", background: "#f0f0f0", color: "#333", borderRadius: "8px", fontWeight: "600", fontSize: "13px", border: "none", cursor: "pointer" },
   btnAssoPro:   { padding: "8px 14px", background: "#0F6E56", color: "#fff", borderRadius: "8px", fontWeight: "600", fontSize: "13px", border: "none", cursor: "pointer" },
-  btnVoir:      { padding: "4px 10px", background: "#f0f0f0", color: "#1D4ED8", borderRadius: "6px", fontSize: "12px", border: "none", cursor: "pointer" },
+  btnVoir:      { padding: "4px 10px", background: "#DBEAFE", color: "#1D4ED8", borderRadius: "6px", fontSize: "12px", border: "none", cursor: "pointer" },
   btnSupprimer: { padding: "4px 10px", background: "#FEF2F2", color: "#ef4444", borderRadius: "6px", fontSize: "12px", border: "none", cursor: "pointer" },
   btnClose:     { background: "none", border: "none", fontSize: "20px", cursor: "pointer", color: "#888" },
   overlay:      { position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 },
@@ -389,7 +466,6 @@ const s = {
   modalFooter:  { display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "1.5rem" },
   label:        { display: "block", fontSize: "13px", fontWeight: "500", color: "#444", marginBottom: "6px" },
   input:        { width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1.5px solid #e0e0e0", fontSize: "14px", background: "#fafafa" },
-  dropdown:     { position: "absolute", bottom: "100%", right: 0, marginBottom: "4px", background: "#fff", borderRadius: "10px", boxShadow: "0 8px 24px rgba(0,0,0,0.12)", border: "1px solid #f0f0f0", zIndex: 100, minWidth: "220px", overflow: "hidden" },
+  dropdown:     { position: "absolute", bottom: "100%", right: 0, marginBottom: "4px", background: "#fff", borderRadius: "10px", boxShadow: "0 8px 24px rgba(0,0,0,0.12)", border: "1px solid #f0f0f0", zIndex: 100, minWidth: "240px", overflow: "hidden" },
   dropdownItem: { display: "block", width: "100%", padding: "12px 16px", background: "none", border: "none", textAlign: "left", fontSize: "13px", cursor: "pointer", color: "#333", fontWeight: "500" },
-  actionsCell: { display: "flex", gap: "6px", flexDirection: "row" },
 };

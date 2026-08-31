@@ -25,7 +25,6 @@ export default function Structures() {
   const [importEnCours, setImportEnCours]         = useState(false);
   const [showImportMenu, setShowImportMenu]       = useState(false);
   const [showExportMenu, setShowExportMenu]       = useState(false);
-  const [programmes, setProgrammes]               = useState([]);
 
   const importRef = useRef(null);
   const exportRef = useRef(null);
@@ -44,7 +43,6 @@ export default function Structures() {
   useEffect(() => {
     charger();
     importerAutomatique();
-    api.get("programmes/").then((res) => setProgrammes(res.data));
   }, []);
 
   // ── Chargement structures ──
@@ -119,17 +117,29 @@ export default function Structures() {
     window.print();
   };
 
-  const handleExportParProgramme = (prog) => {
+  const exporterParSource = (source) => {
     setShowExportMenu(false);
-    api.get(`dashboard/export-excel/?programme_id=${prog.id}`, { responseType: "blob" })
-      .then((res) => {
-        const url = window.URL.createObjectURL(new Blob([res.data]));
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `structures_${prog.nom}.xlsx`;
-        a.click();
-      })
-      .catch(() => setErreur("Erreur lors de l'export."));
+    const structuresFiltrees = structures.filter(st => st.source === source);
+    if (structuresFiltrees.length === 0) {
+      alert("Aucune structure pour cette source.");
+      return;
+    }
+    const headers = ["Nom", "Type", "Secteur", "Source", "Niveau de professionnalisation", "Membres"];
+    const rows = structuresFiltrees.map(st => [
+      st.nom,
+      st.type_display,
+      st.secteur || "",
+      st.source_display,
+      st.niveau_professionnalisation || "",
+      st.nombre_membres,
+    ]);
+    const csv = [headers, ...rows].map(r => r.join(";")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `structures_${source}.csv`;
+    a.click();
   };
 
   // ── Suppression ──
@@ -208,30 +218,23 @@ export default function Structures() {
               📤 Exporter ▾
             </button>
             {showExportMenu && (
-              <div style={{ ...s.dropdown, maxHeight: "300px", overflowY: "auto" }}>
+              <div style={{ ...s.dropdown, maxHeight: "400px", overflowY: "auto" }}>
                 <button onClick={handleExportExcel} style={s.dropdownItem}>
                   📊 Toutes les structures (Excel)
                 </button>
                 <button onClick={handleExportPDF} style={s.dropdownItem}>
                   📄 Toutes les structures (PDF)
                 </button>
-                {programmes.length > 0 && (
-                  <>
-                    <div style={{ borderTop: "1px solid #f0f0f0", margin: "4px 0" }} />
-                    <div style={{ padding: "8px 16px", fontSize: "11px", color: "#aaa", fontWeight: "600", textTransform: "uppercase" }}>
-                      Par programme
-                    </div>
-                    {programmes.map((prog) => (
-                      <button
-                        key={prog.id}
-                        onClick={() => handleExportParProgramme(prog)}
-                        style={s.dropdownItem}
-                      >
-                        📋 {prog.nom}
-                      </button>
-                    ))}
-                  </>
-                )}
+                <div style={{ borderTop: "1px solid #f0f0f0", margin: "4px 0" }} />
+                <div style={{ padding: "8px 16px", fontSize: "11px", color: "#aaa", fontWeight: "600", textTransform: "uppercase" }}>
+                  Par source
+                </div>
+                <button onClick={() => exporterParSource("asso_pro")} style={s.dropdownItem}>
+                  🏢 ASSO-PRO uniquement
+                </button>
+                <button onClick={() => exporterParSource("sageo")} style={s.dropdownItem}>
+                  🏭 SAGEO uniquement
+                </button>
               </div>
             )}
           </div>
@@ -429,6 +432,6 @@ const s = {
   modalFooter:  { display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "1.5rem" },
   label:        { display: "block", fontSize: "13px", fontWeight: "500", color: "#444", marginBottom: "6px" },
   input:        { width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1.5px solid #e0e0e0", fontSize: "14px", background: "#fafafa" },
-  dropdown:     { position: "absolute", top: "100%", right: 0, marginTop: "4px", background: "#fff", borderRadius: "10px", boxShadow: "0 8px 24px rgba(0,0,0,0.12)", border: "1px solid #f0f0f0", zIndex: 100, minWidth: "220px", overflow: "hidden" },
+  dropdown:     { position: "absolute", top: "100%", right: 0, marginTop: "4px", background: "#fff", borderRadius: "10px", boxShadow: "0 8px 24px rgba(0,0,0,0.12)", border: "1px solid #f0f0f0", zIndex: 100, minWidth: "240px", overflow: "hidden" },
   dropdownItem: { display: "block", width: "100%", padding: "12px 16px", background: "none", border: "none", textAlign: "left", fontSize: "13px", cursor: "pointer", color: "#333", fontWeight: "500" },
 };

@@ -260,7 +260,8 @@ def importer_porteurs_igbs():
 
 def get_cours_moodle():
     """
-    Récupère la liste des cours et les inscrits depuis Impact'Lab Academy (Moodle)
+    Récupère la liste des cours, les inscrits et leur progression
+    depuis Impact'Lab Academy (Moodle)
     """
     try:
         # ── 1. Récupérer les cours ──
@@ -301,6 +302,38 @@ def get_cours_moodle():
                     if any(r.get("shortname") == "student" for r in u.get("roles", []))
                 ]
 
+            # ── 3. Pour chaque inscrit, récupérer sa progression ──
+            inscrits_avec_progression = []
+            for user in inscrits:
+                try:
+                    prog_response = requests.get(
+                        MOODLE_BASE_URL,
+                        params={
+                            "wstoken":            MOODLE_TOKEN,
+                            "wsfunction":         "core_completion_get_course_completion_status",
+                            "moodlewsrestformat": "json",
+                            "courseid":           cours_id,
+                            "userid":             user.get("id"),
+                        },
+                        timeout=5
+                    )
+                    progression = "—"
+                    if prog_response.status_code == 200:
+                        data_prog = prog_response.json()
+                        status    = data_prog.get("completionstatus", {})
+                        progression = "✅ Terminé" if status.get("completed") else "⏳ En cours"
+                except Exception:
+                    progression = "—"
+
+                inscrits_avec_progression.append({
+                    "id":                 user.get("id"),
+                    "nom":                user.get("fullname", ""),
+                    "email":              user.get("email", ""),
+                    "pays":               user.get("country", ""),
+                    "derniere_connexion":  user.get("lastcourseaccess", 0),
+                    "progression":        progression,
+                })
+
             cours_data.append({
                 "id":           cours_id,
                 "nom":          cours.get("fullname", ""),
@@ -308,17 +341,8 @@ def get_cours_moodle():
                 "categorie_id": cours.get("categoryid"),
                 "visible":      cours.get("visible", 1),
                 "resume":       cours.get("summary", ""),
-                "nb_inscrits":  len(inscrits),
-                "inscrits":     [
-                    {
-                        "id":       u.get("id"),
-                        "nom":      u.get("fullname", ""),
-                        "email":    u.get("email", ""),
-                        "pays":     u.get("country", ""),
-                        "derniere_connexion": u.get("lastcourseaccess", 0),
-                    }
-                    for u in inscrits
-                ],
+                "nb_inscrits":  len(inscrits_avec_progression),
+                "inscrits":     inscrits_avec_progression,
             })
 
         return {

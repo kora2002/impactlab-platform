@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import api from "../../services/api";
 
 export default function Academy() {
-  const [cours, setCours]             = useState([]);
-  const [chargement, setChargement]   = useState(true);
-  const [erreur, setErreur]           = useState("");
-  const [showModal, setShowModal]     = useState(false);
+  const [cours, setCours]           = useState([]);
+  const [chargement, setChargement] = useState(true);
+  const [erreur, setErreur]         = useState("");
+  const [showModal, setShowModal]   = useState(false);
   const [coursSelectionne, setCoursSelectionne] = useState(null);
 
   const charger = () => {
@@ -71,10 +71,7 @@ export default function Academy() {
                 <span style={s.badgeCategorie}>
                   {c.categorie_id === 9 ? "ASSO-PRO" : c.categorie_id === 2 ? "IGBS" : "Autre"}
                 </span>
-                <button
-                  onClick={() => ouvrirInscrits(c)}
-                  style={s.btnInscrits}
-                >
+                <button onClick={() => ouvrirInscrits(c)} style={s.btnInscrits}>
                   👥 {c.nb_inscrits} inscrit(s)
                 </button>
               </div>
@@ -103,7 +100,7 @@ export default function Academy() {
               <table style={s.table}>
                 <thead>
                   <tr>
-                    {["Nom complet", "Email", "Pays", "Dernière connexion"].map((col) => (
+                    {["Nom complet", "Email", "Pays", "Dernière connexion", "Progression"].map((col) => (
                       <th key={col} style={s.th}>{col}</th>
                     ))}
                   </tr>
@@ -118,6 +115,15 @@ export default function Academy() {
                         {inscrit.derniere_connexion
                           ? new Date(inscrit.derniere_connexion * 1000).toLocaleDateString("fr-FR")
                           : "—"}
+                      </td>
+                      <td style={s.td}>
+                        <span style={{
+                          padding: "3px 10px", borderRadius: "20px", fontSize: "12px", fontWeight: "600",
+                          background: inscrit.progression === "✅ Terminé" ? "#ECFDF5" : "#FEF9EC",
+                          color: inscrit.progression === "✅ Terminé" ? "#065F46" : "#92400E",
+                        }}>
+                          {inscrit.progression || "—"}
+                        </span>
                       </td>
                     </tr>
                   ))}

@@ -24,5 +24,8 @@ urlpatterns = [
     path('connecteurs/tester/',   views.ConnecteurTesterView.as_view(),   name='connecteur_tester'),
     path('connecteurs/importer/', views.ConnecteurImporterView.as_view(), name='connecteur_importer'),
 
+    path('sageo/cohortes/',  views.SageoCohorteView.as_view(),  name='sageo_cohortes'),
+   path('sageo/reporting/', views.SageoReportingView.as_view(), name='sageo_reporting'),
+
 
 ]
